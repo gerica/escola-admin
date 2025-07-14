@@ -1,0 +1,5 @@
+input ParametroRequest{
+     chave:String
+     codigoMunicipio:String
+     modeloContrato:String
+}
