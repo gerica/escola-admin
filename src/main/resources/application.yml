@@ -1,0 +1,83 @@
+# Bloco de informações da aplicação
+app:
+  description: Módulo administrativo
+
+server:
+  port: ${MODULO_SERVICE_PORT:8080}
+
+spring:
+  application:
+    name: ${SPRING_APPLICATION_NAME} # Adicionar um valor padrão é uma boa prática
+  
+  # Configuração do Banco de Dados
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  
+  # Configuração do JPA e Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate} # 'validate' é mais seguro que 'update' em produção
+    show-sql: ${SPRING_JPA_SHOW_SQL:false} # Simplificado para o padrão do Spring Boot
+    properties:
+      hibernate:
+        format_sql: ${SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL:true}
+        # A plataforma do banco de dados geralmente é detectada automaticamente
+    # database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+  # Configuração do GraphQL
+  graphql:
+    path: /graphql # Caminho principal da API GraphQL (simplificado)
+    graphiql:
+      enabled: true # Habilita a interface, que estará em /graphiql (caminho padrão)
+    # CUIDADO: As configurações de erro abaixo são ótimas para DEV, mas inseguras para PROD.
+    # Em produção, considere desabilitar a inclusão de exceções e stack traces.
+    errors:
+      include-exception: true # Mude para false em produção
+      include-message: always
+      include-stacktrace: always # Mude para never em produção
+      include-binding-errors: always
+    # CUIDADO: Permitir todas as origens é inseguro para produção.
+    cors:
+      allowed-origins: "*" # Em produção, especifique os domínios permitidos.
+      allowed-methods: "GET, POST"
+
+  # Spring DevTools para hot-reloading em desenvolvimento
+#  devtools:
+#    restart:
+#      poll-interval: 2s
+#      quiet-period: 1s
+
+# Configuração do cliente Eureka para Service Discovery
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_MODULO_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
+  instance:
+    hostname: ${spring.application.name}
+    prefer-ip-address: true
+
+# Configurações de segurança específicas da aplicação
+application:
+  security:
+    jwt:
+      secret-key: ${APPLICATION_SECURITY_JWT_SECRET_KEY}
+      expiration: 86400000 # 24 horas
+
+# Endpoints do Actuator expostos
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus # Exponha apenas o necessário (health e info são comuns)
+
+# Níveis de Log
+logging:
+  level:
+    # Nível raiz para logs da aplicação
+    com.escola.admin: DEBUG # Ajuste para o seu pacote base
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG # Útil para ver as queries SQL geradas
+    org.hibernate.type.descriptor.sql: TRACE # Útil para ver os parâmetros das queries

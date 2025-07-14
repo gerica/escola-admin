@@ -1,0 +1,6 @@
+type AppConfigResponse{
+    name: String
+    description: String
+    version: String
+    time: DateTime
+}

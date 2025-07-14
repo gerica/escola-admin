@@ -1,0 +1,21 @@
+name: escola
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: ${SPRING_APPLICATION_NAME}
+    ports:
+      - "${MODULO_SERVICE_PORT}:${MODULO_SERVICE_PORT}"
+      - "${MODULO_SERVICE_DEBUG_PORT}:${MODULO_SERVICE_DEBUG_PORT}"
+    volumes:
+      - .:/app
+    env_file:
+      - ./.env
+    networks:
+      - escola_escola-network
+
+networks:
+  escola_escola-network:
+    external: true
