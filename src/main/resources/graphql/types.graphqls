@@ -4,3 +4,10 @@ type AppConfigResponse{
     version: String
     time: DateTime
 }
+
+type ParametroResponse{
+    id: ID
+     chave: String
+     codigoMunicipio: String
+     modeloContrato: String
+}

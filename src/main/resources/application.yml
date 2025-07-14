@@ -15,6 +15,17 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      # Tempo máximo que uma conexão pode viver no pool (ex: 10 minutos = 600000 ms).
+      # Use um valor um pouco menor que o timeout do seu firewall ou banco de dados.
+      max-lifetime: 600000
+      # Tempo que uma conexão pode ficar ociosa antes de ser removida do pool (ex: 5 minutos).
+      idle-timeout: 300000
+      # (Recomendado) Frequência com que o Hikari fará um "ping" em conexões ociosas
+      # para evitar que sejam fechadas pela rede (ex: a cada 2 minutos).
+      keepalive-time: 120000
+      # Tempo máximo que a aplicação vai esperar por uma conexão do pool.
+      connection-timeout: 30000
   
   # Configuração do JPA e Hibernate
   jpa:
@@ -43,6 +54,9 @@ spring:
     cors:
       allowed-origins: "*" # Em produção, especifique os domínios permitidos.
       allowed-methods: "GET, POST"
+
+  jackson:
+    default-property-inclusion: non_null
 
   # Spring DevTools para hot-reloading em desenvolvimento
 #  devtools:

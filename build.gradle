@@ -48,6 +48,9 @@ dependencies {
 	// GraphQL
 	implementation 'com.graphql-java:graphql-java-extended-scalars:22.0'
 
+	// Hibernate
+//	implementation 'io.hypersistence:hypersistence-hibernate-65:3.8.2'
+
 	// Code Generation & Utilities (Lombok & MapStruct)
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
