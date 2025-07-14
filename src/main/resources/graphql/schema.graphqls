@@ -1,0 +1,14 @@
+# schema.graphqls
+type Query {
+    getAppConfig: AppConfigResponse!
+    findByChave(chave: String): ParametroResponse
+}
+
+type Mutation {
+    salvarParametro(request: ParametroRequest!): ParametroResponse!
+}
+
+# Se você tiver subscriptions
+# type Subscription {
+#     # Nenhuma subscription específica aqui
+# }
