@@ -5,18 +5,21 @@ import com.escola.admin.model.response.AuthenticationResponse;
 import com.escola.admin.repository.UserRepository;
 import com.escola.admin.security.JwtService;
 import com.escola.admin.service.AuthenticationService;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuthenticationServiceImpl implements AuthenticationService {
 
-    private final UserRepository repository; // Assuming you have a User entity and repository
-    private final JwtService jwtService;
-    private final AuthenticationManager authenticationManager;
+    UserRepository repository; // Assuming you have a User entity and repository
+    JwtService jwtService;
+    AuthenticationManager authenticationManager;
 
     @Override
     public AuthenticationResponse authenticate(AuthenticationRequest request) {

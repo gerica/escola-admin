@@ -1,4 +1,8 @@
 enum Role {
-     ADMIN
-     USER
+     SUPER_ADMIN,
+     ADMIN_EMPRESA,
+     COORDENADOR,
+     PROFESSOR,
+     FINANCEIRO,
+     RECEPCIONISTA
 }
