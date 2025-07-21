@@ -3,3 +3,8 @@ input ParametroRequest{
      codigoMunicipio:String
      modeloContrato:String
 }
+
+input AuthenticationRequest {
+     username: String
+     password: String
+}

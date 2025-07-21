@@ -10,9 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -34,6 +32,24 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
+    public String generateToken(UserDetails userDetails) {
+        // Prepara as claims extras que queremos adicionar ao token
+        Map<String, Object> extraClaims = new HashMap<>();
+        List<String> authorities = userDetails.getAuthorities()
+                .stream()
+                .map(grantedAuthority -> grantedAuthority.getAuthority())
+                .collect(Collectors.toList());
+        extraClaims.put("authorities", authorities);
+
+        return Jwts.builder()
+                .claims(extraClaims) // Adiciona as claims extras aqui
+                .subject(userDetails.getUsername())
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .signWith(getSignInKey())
+                .compact();
+    }
+
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
@@ -53,19 +69,6 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-    }
-
-    public List<SimpleGrantedAuthority> extractAuthorities(String token) {
-        Claims claims = extractAllClaims(token);
-        // Supondo que você armazena as authorities como uma lista de strings na claim "authorities"
-        @SuppressWarnings("unchecked")
-        List<String> authorities = (List<String>) claims.get("authorities");
-        if (authorities == null || authorities.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return authorities.stream()
-                .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
     }
 
     private SecretKey getSignInKey() {

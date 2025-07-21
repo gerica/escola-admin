@@ -11,3 +11,11 @@ type ParametroResponse{
      codigoMunicipio: String
      modeloContrato: String
 }
+
+type AuthenticationResponse{
+    token: String!
+    username: String!
+    firstName: String
+    lastName: String
+    roles: [Role!]!
+}

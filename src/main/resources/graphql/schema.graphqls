@@ -6,6 +6,7 @@ type Query {
 
 type Mutation {
     salvarParametro(request: ParametroRequest!): ParametroResponse!
+    authenticate(request: AuthenticationRequest): AuthenticationResponse!
 }
 
 # Se você tiver subscriptions

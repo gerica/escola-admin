@@ -29,9 +29,12 @@ public class ParametroController {
     public ParametroResponse findByChave(@Argument String chave) {
         log.info("Executando findByChave com a chave: {}", chave);
         var optParametro = service.findByChave(chave);
-        return optParametro
-                .map(mapper::toResponse) // Se o Optional contiver um valor, aplica o mapper
+        ParametroResponse response = optParametro
+                .map(mapper::toResponse)
                 .orElse(null);
+        log.info("Admin-service retornando para chave {}: {}", chave, response); // <-- Adicione este log
+        return response;
+
     }
 
     @MutationMapping
