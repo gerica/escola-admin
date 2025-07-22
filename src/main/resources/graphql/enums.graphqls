@@ -6,3 +6,8 @@ enum Role {
      FINANCEIRO,
      RECEPCIONISTA
 }
+
+enum SortOrder {
+     asc
+     desc
+}

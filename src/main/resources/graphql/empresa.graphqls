@@ -1,0 +1,53 @@
+input EmpresaRequest {
+    id: ID
+    nomeFantasia: String
+    razaoSocial: String
+    cnpj: String
+    inscricaoEstadual: String
+    telefone: String
+    email: String
+    endereco: String
+    logoUrl: String
+    ativo: Boolean
+}
+
+type EmpresaResponse {
+    id: ID!,
+    nomeFantasia: String
+    razaoSocial: String
+    cnpj: String
+    inscricaoEstadual: String
+    telefone: String
+    email: String
+    endereco: String
+    logoUrl: String
+    ativo: Boolean
+    dataCadastro: Date
+    dataAtualizacao: Date
+}
+
+type EmpresaResponsePage {
+    content: [EmpresaResponse]
+    totalPages: Int
+    totalElements: Long
+    number: Int
+    size: Int
+    first: Boolean!
+    last: Boolean!
+    empty: Boolean!
+}
+
+extend type Query {
+    fetchAllEmpresasByFilter(
+        filtro: String
+        page: Int = 0 # Default to page 0
+        size: Int = 10 # Default to size 10
+        sort: [SortRequest]
+    ): EmpresaResponsePage!
+
+    fetchByIdEmpresa(id: ID): EmpresaResponse!
+}
+
+extend type Mutation {
+    saveEmpresa(request: EmpresaRequest!): EmpresaResponse!
+}

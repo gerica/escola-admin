@@ -47,8 +47,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Lista de padrões de URL que devem ser públicos e ignorados pelo filtro JWT.
         final List<String> publicPatterns = List.of(
                 "/",           // A raiz exata
-                "/graphiql/**", // A UI do GraphiQL e todos os seus assets (CSS, JS)
-                "/graphql/**"  // O endpoint do GraphQL (para permitir introspecção e queries públicas)
+                "/graphiql/**" // A UI do GraphiQL e todos os seus assets (CSS, JS)
+//                "/graphql/**"  // O endpoint do GraphQL (para permitir introspecção e queries públicas)
         );
 
         // Verifica se a URL da requisição atual corresponde a algum dos padrões públicos.

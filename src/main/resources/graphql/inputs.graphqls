@@ -8,3 +8,8 @@ input AuthenticationRequest {
      username: String
      password: String
 }
+
+input SortRequest {
+     property: String!
+     direction: SortOrder!
+}

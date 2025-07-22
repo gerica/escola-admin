@@ -1,4 +1,4 @@
-package com.escola.admin.config;
+package com.escola.admin.config.init;
 
 import com.escola.admin.model.entity.Role;
 import com.escola.admin.model.entity.User;
@@ -7,7 +7,6 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -17,23 +16,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
-public class DataInitializer implements CommandLineRunner {
+public class UsuarioInitializer {
 
     UserRepository userRepository;
     PasswordEncoder passwordEncoder;
-//    ParametroService service;
 
-    @Override
-    public void run(String... args) {
-        log.info("Iniciando a verificação de dados iniciais...");
-
-        criarUsuarios();
-
-        log.info("Verificação de dados iniciais concluída.");
-    }
-
-
-    void criarUsuarios() {
+    void carga() {
         criarUsuarioSuperAdmin();
         criarUsuarioAdminEmpresa();
         criarUsuarioCoordenador();

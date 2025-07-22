@@ -30,12 +30,14 @@ public class PageableHelp {
                 Sort.Direction direction = (si.direction() == SortOrder.asc) ? Sort.Direction.ASC : Sort.Direction.DESC;
                 sortOrders.add(new Sort.Order(direction, si.property()));
             }
-        } else {
-            // Apply default sort if no sort input is provided
-            // This mirrors @PageableDefault(sort = "nome")
-            sortOrders.add(new Sort.Order(Sort.Direction.ASC, "nome"));
+            return PageRequest.of(pageNum, pageSize, Sort.by(sortOrders));
         }
+//        else {
+//            // Apply default sort if no sort input is provided
+//            // This mirrors @PageableDefault(sort = "nome")
+//            sortOrders.add(new Sort.Order(Sort.Direction.ASC, ""));
+//        }
 
-        return PageRequest.of(pageNum, pageSize, Sort.by(sortOrders));
+        return PageRequest.of(pageNum, pageSize);
     }
 }
