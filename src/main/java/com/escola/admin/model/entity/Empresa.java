@@ -44,6 +44,7 @@ public class Empresa {
     String logoUrl; // URL do logo da empresa, se houver
 
     @Column(nullable = false)
+    @Builder.Default
     Boolean ativo = true; // Indica se a empresa está ativa no sistema (padrão: true)
 
     @Column(nullable = false, updatable = false)

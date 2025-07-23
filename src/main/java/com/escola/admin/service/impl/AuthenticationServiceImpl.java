@@ -2,7 +2,7 @@ package com.escola.admin.service.impl;
 
 import com.escola.admin.model.request.AuthenticationRequest;
 import com.escola.admin.model.response.AuthenticationResponse;
-import com.escola.admin.repository.UserRepository;
+import com.escola.admin.repository.UsuarioRepository;
 import com.escola.admin.security.JwtService;
 import com.escola.admin.service.AuthenticationService;
 import lombok.AccessLevel;
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuthenticationServiceImpl implements AuthenticationService {
 
-    UserRepository repository; // Assuming you have a User entity and repository
+    UsuarioRepository repository; // Assuming you have a User entity and repository
     JwtService jwtService;
     AuthenticationManager authenticationManager;
 

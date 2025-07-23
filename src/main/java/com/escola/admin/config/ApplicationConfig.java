@@ -1,7 +1,7 @@
 package com.escola.admin.config;
 
 
-import com.escola.admin.repository.UserRepository;
+import com.escola.admin.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -20,7 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Slf4j
 public class ApplicationConfig {
 
-    private final UserRepository userRepository;
+    private final UsuarioRepository userRepository;
 
     @Bean
     public UserDetailsService userDetailsService() {

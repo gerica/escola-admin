@@ -1,0 +1,24 @@
+package com.escola.admin.service;
+
+import com.escola.admin.model.entity.Usuario;
+import com.escola.admin.model.request.UsuarioRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import reactor.core.publisher.Mono;
+
+import java.util.Optional;
+
+public interface UsuarioService {
+
+    Mono<Usuario> save(UsuarioRequest request);
+
+    Optional<Usuario> findById(Long id);
+
+    Optional<Page<Usuario>> findByFiltro(String filtro, Pageable pageable);
+
+    Optional<Void> deleteById(Long id);
+
+    Optional<Void> delete(Usuario empresa);
+
+
+}

@@ -7,6 +7,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -19,18 +20,43 @@ import java.util.stream.Collectors;
 @Entity
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = false)
 @Table(name = "tb_usuario")
-public class User implements UserDetails {
+public class Usuario implements UserDetails {
 
     @Id
-    @GeneratedValue
-    Integer id;
-    String firstname;
-    String lastname;
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // Estratégia de geração de ID (auto-incremento)
+    Long id;
 
-    @Column(unique = true)
-    String username; // This will be the user's login identifier
+    @Column(nullable = false, unique = true, length = 50) // Nome de usuário para login, obrigatório e único
+    String username;
 
     String password;
+
+    @Column(nullable = false, length = 100)
+    String firstname;
+
+    @Column(nullable = false, length = 100)
+    String lastname;
+
+    @Column(unique = true, length = 100) // E-mail, opcional mas deve ser único se presente
+    String email;
+
+    @Column(nullable = false)
+    @Builder.Default
+    boolean enabled = true; // Indica se o usuário está ativo/habilitado (padrão: true)
+
+    // Relacionamento Many-to-One com a entidade Empresa
+    // O campo 'nullable = true' permite que um usuário não tenha uma empresa associada (ex: SUPER_ADMIN)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empresa_id", nullable = true)
+    Empresa empresa;
+
+    @Column(nullable = false, updatable = false)
+    LocalDateTime dataCadastro; // Data e hora de criação do registro
+
+    @Column(nullable = false)
+    LocalDateTime dataAtualizacao; // Data e hora da última atualização do registro
+
+    // Métodos de callback JPA para gerenciar datas de criação e atualização
 
     // 1. Mapeamento para uma coleção de Roles
     @ElementCollection(fetch = FetchType.EAGER)
@@ -86,5 +112,17 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    // Métodos de callback JPA para gerenciar datas de criação e atualização
+    @PrePersist
+    protected void onCreate() {
+        dataCadastro = LocalDateTime.now();
+        dataAtualizacao = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        dataAtualizacao = LocalDateTime.now();
     }
 }
