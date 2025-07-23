@@ -8,6 +8,7 @@ import com.escola.admin.repository.UsuarioRepository;
 import com.escola.admin.security.BaseException;
 import com.escola.admin.service.EmpresaService;
 import com.escola.admin.service.UsuarioService;
+import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -31,6 +32,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     UsuarioMapper mapper;
 
     @Override
+    @Transactional
     public Mono<Usuario> save(UsuarioRequest request) { // No more 'throws BaseException' here
         return Mono.defer(() -> { // Use Mono.defer to defer execution until subscribed
             Usuario entity;
@@ -40,18 +42,19 @@ public class UsuarioServiceImpl implements UsuarioService {
                 optional = repository.findById(request.id());
             }
 
-            Optional<Empresa> empresaOptional = empresaService.findById(request.idEmpresa());
-            if (empresaOptional.isEmpty()) {
-                // If company not found, return a Mono.error
-                return Mono.error(new BaseException("Não foi encontrada nenhuma empresa com o ID fornecido."));
-            }
-
             if (optional.isPresent()) {
                 entity = mapper.updateEntity(request, optional.get());
             } else {
                 entity = mapper.toEntity(request);
             }
-            entity.setEmpresa(empresaOptional.get());
+            if (request.idEmpresa() != null) {
+                Optional<Empresa> empresaOptional = empresaService.findById(request.idEmpresa());
+                if (empresaOptional.isEmpty()) {
+                    // If company not found, return a Mono.error
+                    return Mono.error(new BaseException("Não foi encontrada nenhuma empresa com o ID fornecido."));
+                }
+                entity.setEmpresa(empresaOptional.get());
+            }
 
             try {
                 // Wrap the blocking save operation in a Mono.just or Mono.fromCallable

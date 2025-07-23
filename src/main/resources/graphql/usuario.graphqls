@@ -1,6 +1,6 @@
 input UsuarioRequest {
     id: ID
-    idEmpresa: ID!
+    idEmpresa: ID
     username: String
     password: String
     firstname: String
@@ -15,12 +15,13 @@ type UsuarioResponse {
 #    idEmpresa: ID
     empresa: EmpresaResponse
     username: String
-    password: String
     firstname: String
     lastname: String
     email: String
     enabled: Boolean
     roles: [Role]
+    dataCadastro: Date
+    dataAtualizacao: Date
 }
 
 type UsuarioResponsePage {

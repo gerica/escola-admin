@@ -41,8 +41,7 @@ public class Usuario implements UserDetails {
     String email;
 
     @Column(nullable = false)
-    @Builder.Default
-    boolean enabled = true; // Indica se o usuário está ativo/habilitado (padrão: true)
+    boolean enabled;
 
     // Relacionamento Many-to-One com a entidade Empresa
     // O campo 'nullable = true' permite que um usuário não tenha uma empresa associada (ex: SUPER_ADMIN)
@@ -111,7 +110,7 @@ public class Usuario implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
     }
 
     // Métodos de callback JPA para gerenciar datas de criação e atualização
