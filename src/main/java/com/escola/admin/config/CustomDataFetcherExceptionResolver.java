@@ -30,7 +30,7 @@ public class CustomDataFetcherExceptionResolver implements DataFetcherExceptionR
         if (exception instanceof BaseException baseException) {
             log.info("Handling BaseException: {}", baseException.getMessage());
             // ... (rest of your existing code for BaseException)
-            SourceLocation location = null;
+                        SourceLocation location = null;
             if (environment.getField() != null && environment.getField().getSourceLocation() != null) {
                 location = environment.getField().getSourceLocation();
             } else if (environment.getOperationDefinition() != null && environment.getOperationDefinition().getSourceLocation() != null) {

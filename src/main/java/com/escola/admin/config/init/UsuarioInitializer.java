@@ -67,6 +67,7 @@ public class UsuarioInitializer {
                     .email("superadmin@esc.com.br")
                     .password(passwordEncoder.encode("6vkWITTQcIKO2y1PEP6mPM"))
                     .roles(Set.of(Role.SUPER_ADMIN))
+                    .enabled(true)
                     .empresa(null) // SUPER_ADMIN não tem empresa associada
                     .build();
             userRepository.save(superAdminUser);
@@ -84,6 +85,7 @@ public class UsuarioInitializer {
                     .email("admin@esc.com.br")
                     .password(passwordEncoder.encode("adminempresa123"))
                     .roles(Set.of(Role.ADMIN_EMPRESA))
+                    .enabled(true)
                     .empresa(empresaOptional.orElse(null)) // Vincula à empresa encontrada ou null
                     .build();
             userRepository.save(adminEmpresaUser);
@@ -101,6 +103,7 @@ public class UsuarioInitializer {
                     .email("coordenador@esc.com.br")
                     .password(passwordEncoder.encode("coordenador123"))
                     .roles(Set.of(Role.COORDENADOR))
+                    .enabled(true)
                     .empresa(empresaOptional.orElse(null)) // Vincula à empresa encontrada ou null
                     .build();
             userRepository.save(coordenadorUser);
@@ -118,6 +121,7 @@ public class UsuarioInitializer {
                     .email("professor@esc.com.br")
                     .password(passwordEncoder.encode("professor123"))
                     .roles(Set.of(Role.PROFESSOR))
+                    .enabled(true)
                     .empresa(empresaOptional.orElse(null)) // Vincula à empresa encontrada ou null
                     .build();
             userRepository.save(professorUser);
@@ -135,6 +139,7 @@ public class UsuarioInitializer {
                     .email("financeiro@esc.com.br")
                     .password(passwordEncoder.encode("financeiro123"))
                     .roles(Set.of(Role.FINANCEIRO))
+                    .enabled(true)
                     .empresa(empresaOptional.orElse(null)) // Vincula à empresa encontrada ou null
                     .build();
             userRepository.save(financeiroUser);
@@ -152,6 +157,7 @@ public class UsuarioInitializer {
                     .email("recepcionista@esc.com.br")
                     .password(passwordEncoder.encode("recepcionista123"))
                     .roles(Set.of(Role.RECEPCIONISTA))
+                    .enabled(false)
                     .empresa(empresaOptional.orElse(null)) // Vincula à empresa encontrada ou null
                     .build();
             userRepository.save(recepcionistaUser);
