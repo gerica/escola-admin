@@ -43,7 +43,16 @@ extend type Query {
         sort: [SortRequest]
     ): UsuarioResponsePage!
 
+    fetchAllUsuariosByFilterAndEmpresa(
+        filtro: String
+        idEmpresa: ID!
+        page: Int = 0 # Default to page 0
+        size: Int = 10 # Default to size 10
+        sort: [SortRequest]
+    ): UsuarioResponsePage!
+
     fetchByIdUsuario(id: ID): UsuarioResponse!
+
 }
 
 extend type Mutation {

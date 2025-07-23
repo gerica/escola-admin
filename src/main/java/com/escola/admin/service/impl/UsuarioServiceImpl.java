@@ -95,6 +95,11 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     @Override
+    public Optional<Page<Usuario>> findByFiltroAndEmpresa(String filtro, Long idEmpresa, Pageable pageable) {
+        return repository.findByFiltroAndEmpresa(filtro, idEmpresa, pageable);
+    }
+
+    @Override
     public Optional<Void> deleteById(Long id) {
         return Optional.empty();
     }

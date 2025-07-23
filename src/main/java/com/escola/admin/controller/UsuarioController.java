@@ -56,6 +56,19 @@ public class UsuarioController {
 
     @QueryMapping
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    public Page<UsuarioResponse> fetchAllUsuariosByFilterAndEmpresa(
+            @Argument String filtro,
+            @Argument Long idEmpresa,
+            @Argument Optional<Integer> page, // Optional to handle default values from schema
+            @Argument Optional<Integer> size, // Optional to handle default values from schema
+            @Argument Optional<List<SortInput>> sort // Optional for sorting
+    ) {
+        Page<Usuario> entities = service.findByFiltroAndEmpresa(filtro, idEmpresa, pageableHelp.getPageable(page, size, sort)).orElse(Page.empty());
+        return entities.map(mapper::toResponse);
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public Optional<UsuarioResponse> fetchByIdUsuario(@Argument Long id) {
         return service.findById(id).map(mapper::toResponse);
     }

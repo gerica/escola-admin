@@ -28,4 +28,14 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
             " (LOWER(e.lastname) LIKE LOWER(CONCAT('%', :criteria, '%')) ) ")
     Optional<Page<Usuario>> findByFiltro(@Param("criteria") String filtro, Pageable pageable);
 
+    @Query("SELECT e FROM Usuario e " +
+            " WHERE e.empresa.id = :idEmpresa " + // This condition always applies
+            " AND ( (:criteria IS NULL OR :criteria = '') OR " + // If criteria is null/empty, this is TRUE
+            "        (LOWER(e.username) LIKE LOWER(CONCAT('%', :criteria, '%'))) OR " +
+            "        (LOWER(e.firstname) LIKE LOWER(CONCAT('%', :criteria, '%'))) OR " +
+            "        (LOWER(e.email) LIKE LOWER(CONCAT('%', :criteria, '%'))) OR " +
+            "        (LOWER(e.lastname) LIKE LOWER(CONCAT('%', :criteria, '%'))) )" // The OR group for criteria
+    )
+    Optional<Page<Usuario>> findByFiltroAndEmpresa(@Param("criteria") String filtro, @Param("idEmpresa") Long idEmpresa, Pageable pageable);
+
 }

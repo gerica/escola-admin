@@ -16,6 +16,8 @@ public interface UsuarioService {
 
     Optional<Page<Usuario>> findByFiltro(String filtro, Pageable pageable);
 
+    Optional<Page<Usuario>> findByFiltroAndEmpresa(String filtro, Long idEmpresa, Pageable pageable);
+
     Optional<Void> deleteById(Long id);
 
     Optional<Void> delete(Usuario empresa);
