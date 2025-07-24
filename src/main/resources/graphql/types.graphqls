@@ -18,4 +18,5 @@ type AuthenticationResponse{
     firstName: String
     lastName: String
     roles: [Role!]!
+    precisaAlterarSenha: Boolean
 }

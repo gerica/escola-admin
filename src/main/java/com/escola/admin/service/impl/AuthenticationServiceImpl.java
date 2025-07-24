@@ -25,12 +25,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()
+                        request.username(),
+                        request.password()
                 )
         );
         // If we get here, the user is authenticated
-        var user = repository.findByUsername(request.getUsername())
+        var user = repository.findByUsername(request.username())
                 .orElseThrow(); // Or handle exception appropriately
         var jwtToken = jwtService.generateToken(user);
         return AuthenticationResponse.builder()
@@ -39,6 +39,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .firstName(user.getFirstname())
                 .lastName(user.getLastname())
                 .roles(user.getRoles())
+                .precisaAlterarSenha(user.isPrecisaAlterarSenha())
                 .build();
     }
 }

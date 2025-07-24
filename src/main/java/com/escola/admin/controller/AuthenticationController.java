@@ -24,4 +24,5 @@ public class AuthenticationController {
         log.info("AuthenticationController.authenticate");
         return service.authenticate(request);
     }
+
 }

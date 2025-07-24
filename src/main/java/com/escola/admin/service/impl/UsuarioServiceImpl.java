@@ -228,7 +228,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         var variaveis = List.of(
                 Map.of("key", "nomeUsuario", "value", usuario.getFirstname()),
                 Map.of("key", "senhaTemporaria", "value", plainTextPassword),
-                Map.of("key", "urlLogin", "value", "http://localhost:4200/mudarSenha"), // Idealmente, viria de uma configuração
+                Map.of("key", "urlLogin", "value", "http://localhost:4200/login"), // Idealmente, viria de uma configuração
                 Map.of("key", "nomeSistema", "value", "Escola") // Idealmente, viria de uma configuração
         );
 

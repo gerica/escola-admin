@@ -87,6 +87,7 @@ public class UsuarioInitializer {
                     .password(passwordEncoder.encode("adminempresa123"))
                     .roles(Set.of(Role.ADMIN_EMPRESA))
                     .enabled(true)
+                    .precisaAlterarSenha(true)
                     .empresa(empresaOptional.orElse(null)) // Vincula à empresa encontrada ou null
                     .build();
             userRepository.save(adminEmpresaUser);
@@ -105,6 +106,7 @@ public class UsuarioInitializer {
                     .password(passwordEncoder.encode("coordenador123"))
                     .roles(Set.of(Role.COORDENADOR))
                     .enabled(true)
+                    .precisaAlterarSenha(true)
                     .empresa(empresaOptional.orElse(null)) // Vincula à empresa encontrada ou null
                     .build();
             userRepository.save(coordenadorUser);
@@ -123,6 +125,7 @@ public class UsuarioInitializer {
                     .password(passwordEncoder.encode("professor123"))
                     .roles(Set.of(Role.PROFESSOR))
                     .enabled(true)
+                    .precisaAlterarSenha(true)
                     .empresa(empresaOptional.orElse(null)) // Vincula à empresa encontrada ou null
                     .build();
             userRepository.save(professorUser);
@@ -141,6 +144,7 @@ public class UsuarioInitializer {
                     .password(passwordEncoder.encode("financeiro123"))
                     .roles(Set.of(Role.FINANCEIRO))
                     .enabled(true)
+                    .precisaAlterarSenha(true)
                     .empresa(empresaOptional.orElse(null)) // Vincula à empresa encontrada ou null
                     .build();
             userRepository.save(financeiroUser);
@@ -159,6 +163,7 @@ public class UsuarioInitializer {
                     .password(passwordEncoder.encode("recepcionista123"))
                     .roles(Set.of(Role.RECEPCIONISTA))
                     .enabled(false)
+                    .precisaAlterarSenha(true)
                     .empresa(empresaOptional.orElse(null)) // Vincula à empresa encontrada ou null
                     .build();
             userRepository.save(recepcionistaUser);

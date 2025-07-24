@@ -5,3 +5,4 @@ No módulo de usuário:
 
 Serviços
 (w)   criar serviço de enviar e-mail
+( ) tratar para caso onde o usuário está desabilitado
