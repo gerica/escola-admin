@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Random;
 
@@ -35,7 +36,7 @@ public class EmpresaInitializer {
         for (int i = 1; i <= NUM_EMPRESAS_TO_CREATE; i++) {
             String nomeFantasia = "Empresa Teste " + i;
             // Verifica se a empresa já existe para evitar duplicatas em reinícios do app
-            Optional<Page<Empresa>> byFiltro = service.findByFiltro(nomeFantasia, pageableHelp.getPageable(Optional.empty(), Optional.empty(), Optional.empty()));
+            Optional<Page<Empresa>> byFiltro = service.findByFiltro(nomeFantasia, pageableHelp.getPageable(0, 10, new ArrayList<>()));
             if (byFiltro.isPresent() && byFiltro.get().getSize() > 0) {
                 log.info("Criando empresa: {}", nomeFantasia);
 

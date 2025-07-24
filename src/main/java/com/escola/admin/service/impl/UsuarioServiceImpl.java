@@ -4,10 +4,12 @@ import com.escola.admin.model.entity.Role;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.UsuarioMapper;
 import com.escola.admin.model.request.UsuarioRequest;
+import com.escola.admin.model.response.ParametroResponse;
 import com.escola.admin.repository.UsuarioRepository;
 import com.escola.admin.security.BaseException;
 import com.escola.admin.service.EmpresaService;
 import com.escola.admin.service.UsuarioService;
+import com.escola.admin.util.PasswordGenerator;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -16,9 +18,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.graphql.client.HttpGraphQlClient;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -30,17 +37,40 @@ public class UsuarioServiceImpl implements UsuarioService {
     UsuarioRepository repository;
     EmpresaService empresaService;
     UsuarioMapper mapper;
+    PasswordEncoder passwordEncoder;
+    HttpGraphQlClient graphQlClient;
+    String MUTATION_SEND_EMAIL = """
+            mutation SendOnboardingEmail($request: EmailRequest!) {
+              sendEmail(request: $request)
+            }
+            """;
 
     @Override
     @Transactional
     public Mono<Usuario> save(UsuarioRequest request) {
-        // 1. Inicia o fluxo: encontra um usuário existente para atualizar ou prepara um novo para criar.
+        // 1. Encontra ou cria um usuário
         Mono<Usuario> usuarioMono = Mono.justOrEmpty(request.id())
                 .flatMap(id -> Mono.fromCallable(() -> repository.findById(id))
-                        .flatMap(Mono::justOrEmpty)) // Converte Mono<Optional<Usuario>> para Mono<Usuario> ou Mono.empty()
+                        .flatMap(Mono::justOrEmpty))
                 .map(existingUser -> mapper.updateEntity(request, existingUser))
-                .switchIfEmpty(Mono.fromSupplier(() -> mapper.toEntity(request)));
+                .switchIfEmpty(Mono.defer(() -> { // Usamos Mono.defer para lógica complexa
+                    // --- LÓGICA PARA NOVOS USUÁRIOS ---
+                    Usuario novoUsuario = mapper.toEntity(request);
+                    String plainPassword = PasswordGenerator.generateDefaultPassword(); // <-- Guardamos a senha aqui
+                    novoUsuario.setPassword(passwordEncoder.encode(plainPassword));
+                    novoUsuario.setPrecisaAlterarSenha(true);
 
+                    // Após salvar, dispara o envio do e-mail
+                    return Mono.just(novoUsuario)
+                            .flatMap(userToSave -> Mono.fromCallable(() -> repository.save(userToSave)))
+                            .flatMap(savedUser -> sendOnboardingEmail(savedUser, plainPassword)
+                                    .thenReturn(savedUser) // Retorna o usuário salvo após o e-mail ser enviado
+                                    .onErrorResume(e -> {
+                                        // Se o e-mail falhar, logamos o erro mas não quebramos a criação do usuário
+                                        log.error("Criação do usuário {} bem-sucedida, mas o envio do e-mail falhou.", savedUser.getUsername(), e);
+                                        return Mono.just(savedUser);
+                                    }));
+                }));
         return usuarioMono
                 // 2. Valida as regras de negócio e associa a empresa, se aplicável.
                 .flatMap(usuario -> {
@@ -76,6 +106,24 @@ public class UsuarioServiceImpl implements UsuarioService {
                 })
                 // 3. Salva o usuário (novo ou atualizado) no banco de dados.
                 .flatMap(usuarioParaSalvar -> Mono.fromCallable(() -> repository.save(usuarioParaSalvar)))
+
+                // --- INÍCIO: Bloco para TESTAR o envio de e-mail em toda operação de salvar ---
+                .flatMap(savedUser -> {
+                    log.info("[TESTE] Disparando e-mail para o usuário: {}", savedUser.getUsername());
+                    // ATENÇÃO: A senha real não está disponível aqui para usuários existentes.
+                    // Usaremos uma senha fictícia apenas para o teste da chamada.
+                    String dummyPasswordForTest = "senha-de-teste-123";
+
+                    return sendOnboardingEmail(savedUser, dummyPasswordForTest)
+                            .thenReturn(savedUser) // Importante: retorna o usuário para continuar o fluxo
+                            .onErrorResume(e -> {
+                                // Se o envio do e-mail falhar, apenas logamos o erro, mas não quebramos a operação.
+                                log.error("[TESTE] Falha ao enviar e-mail para {}, mas o usuário foi salvo com sucesso.", savedUser.getUsername(), e);
+                                return Mono.just(savedUser); // Continua o fluxo mesmo com erro no e-mail.
+                            });
+                })
+                // --- FIM DO BLOCO DE TESTE ---
+
                 // 4. Trata erros de forma reativa.
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
                 .onErrorMap(e -> !(e instanceof BaseException), this::handleGenericException);
@@ -103,12 +151,34 @@ public class UsuarioServiceImpl implements UsuarioService {
         return new BaseException(errorMessage, e);
     }
 
+    // Em UsuarioServiceImpl.java
+
     /**
      * Encapsula exceções genéricas e inesperadas em uma BaseException.
      */
     private BaseException handleGenericException(Throwable e) {
         log.error("Ocorreu um erro inesperado ao salvar o usuário.", e);
         return new BaseException("Ocorreu um erro inesperado ao salvar o usuário.", e);
+    }
+
+    @Override
+    public Mono<Void> changePassword(String newPassword) {
+        return Mono.defer(() -> {
+            // Pega o usuário autenticado do contexto de segurança
+            return Mono.just(SecurityContextHolder.getContext().getAuthentication().getName())
+                    .flatMap(username -> Mono.fromCallable(() -> repository.findByUsername(username)) // Supondo que você tenha esse método
+                            .flatMap(Mono::justOrEmpty))
+                    .switchIfEmpty(Mono.error(new BaseException("Usuário não encontrado, token inválido.")))
+                    .flatMap(usuario -> {
+                        // Atualiza a senha e o status
+                        usuario.setPassword(passwordEncoder.encode(newPassword));
+                        usuario.setPrecisaAlterarSenha(false); // <-- Ponto chave!
+
+                        // Salva as alterações
+                        return Mono.fromCallable(() -> repository.save(usuario));
+                    })
+                    .then(); // Converte para Mono<Void> no sucesso
+        });
     }
 
     @Override
@@ -134,5 +204,48 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     public Optional<Void> delete(Usuario empresa) {
         return Optional.empty();
+    }
+
+    public void sendEmail() {
+        ParametroResponse response = graphQlClient.document(MUTATION_SEND_EMAIL)
+                .variable("", "")
+                .retrieve("findByChave")
+                .toEntity(ParametroResponse.class)
+                .block();
+    }
+
+    // Em UsuarioServiceImpl.java
+
+    /**
+     * Envia um e-mail de boas-vindas para um novo usuário.
+     *
+     * @param usuario           O usuário recém-criado.
+     * @param plainTextPassword A senha não criptografada gerada para o primeiro acesso.
+     * @return um Mono<Void> que completa quando o e-mail é enviado, ou emite um erro.
+     */
+    public Mono<Void> sendOnboardingEmail(Usuario usuario, String plainTextPassword) {
+        // 1. Monta a lista de variáveis para o template de e-mail.
+        var variaveis = List.of(
+                Map.of("key", "nomeUsuario", "value", usuario.getFirstname()),
+                Map.of("key", "senhaTemporaria", "value", plainTextPassword),
+                Map.of("key", "urlLogin", "value", "http://localhost:4200/mudarSenha"), // Idealmente, viria de uma configuração
+                Map.of("key", "nomeSistema", "value", "Escola") // Idealmente, viria de uma configuração
+        );
+
+        // 2. Monta o objeto de requisição que corresponde ao `EmailRequest` no GraphQL.
+        var emailRequest = Map.of(
+                "to", usuario.getEmail(),
+                "subject", "Seu primeiro acesso ao sistema",
+                "tipo", "ONBOARDING", // ou ONBOARDING, conforme seu Enum
+                "variaveis", variaveis
+        );
+
+        // 3. Executa a chamada GraphQL
+        log.info("Enviando e-mail de boas-vindas para: {}", usuario.getEmail());
+        return graphQlClient.document(MUTATION_SEND_EMAIL)
+                .variable("request", emailRequest) // Passa o mapa como a variável $request
+                .execute() // Usamos execute() para operações que podem não ter um corpo de resposta complexo
+                .doOnError(ex -> log.error("Falha ao enviar e-mail para {}: {}", usuario.getEmail(), ex.getMessage()))
+                .then(); // Converte para Mono<Void>, indicando que a operação foi concluída.
     }
 }

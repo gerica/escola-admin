@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Set;
 
@@ -52,7 +53,7 @@ public class UsuarioInitializer {
     private Optional<Empresa> getAnyExistingEmpresa() {
         // Busca a primeira empresa cadastrada. Se houver 25, pega a primeira.
         // PageRequest.of(0, 1) busca 1 elemento na primeira página.
-        Optional<Page<Empresa>> byFiltro = empresaService.findByFiltro("", pageableHelp.getPageable(Optional.empty(), Optional.empty(), Optional.empty()));
+        Optional<Page<Empresa>> byFiltro = empresaService.findByFiltro("", pageableHelp.getPageable(0, 10, new ArrayList<>()));
         return byFiltro.get().getContent().stream().findAny();
 
     }

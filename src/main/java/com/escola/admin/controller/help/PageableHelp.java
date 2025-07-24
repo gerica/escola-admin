@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -20,13 +19,11 @@ public class PageableHelp {
     public static final int DEFAULT_PAGE_NUMBER = 0;
     public static final int DEFAULT_PAGE_SIZE = 10;
 
-    public Pageable getPageable(Optional<Integer> page, Optional<Integer> size, Optional<List<SortInput>> sort) {
-        int pageNum = page.orElse(DEFAULT_PAGE_NUMBER); // Use default 0 if not provided
-        int pageSize = size.orElse(DEFAULT_PAGE_SIZE); // Use default 10 if not provided
+    public Pageable getPageable(int pageNum, int pageSize, List<SortInput> sort) {
 
         List<Sort.Order> sortOrders = new ArrayList<>();
-        if (sort.isPresent()) {
-            for (SortInput si : sort.get()) {
+        if (sort != null && !sort.isEmpty()) {
+            for (SortInput si : sort) {
                 Sort.Direction direction = (si.direction() == SortOrder.asc) ? Sort.Direction.ASC : Sort.Direction.DESC;
                 sortOrders.add(new Sort.Order(direction, si.property()));
             }

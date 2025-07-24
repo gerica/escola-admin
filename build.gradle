@@ -28,43 +28,58 @@ springBoot {
 }
 
 dependencies {
-	// Spring Boot Starters
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	implementation 'org.springframework.boot:spring-boot-starter-graphql'
-	implementation 'org.springframework.boot:spring-boot-starter-security'
+	// --- Spring Boot Starters ---
+	// Suporte essencial para aplicações web, incluindo RESTful com Spring MVC.
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	// Suporte para programação reativa e o WebClient para chamadas HTTP não-bloqueantes.
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	// Facilita o acesso a dados com JPA (Java Persistence API) via Spring Data e Hibernate.
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	// Habilita funcionalidades de segurança, como autenticação e autorização.
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	// Adiciona suporte para a criação de APIs GraphQL.
+	implementation 'org.springframework.boot:spring-boot-starter-graphql'
+	// Fornece as dependências para validação de beans (ex: @NotBlank, @NotNull).
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-	// Spring Cloud
+	// --- Spring Cloud ---
+	// Permite que este serviço se registre como um cliente no Eureka Server para service discovery.
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
-	// Database
+	// --- Database ---
+	// Driver JDBC para conectar a aplicação a um banco de dados PostgreSQL.
 	runtimeOnly 'org.postgresql:postgresql'
 
-	// Security - JWT
+	// --- Security (JWT) ---
+	// Biblioteca para criação e verificação de JSON Web Tokens (JWT).
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
 
-	// GraphQL
+	// --- GraphQL ---
+	// Adiciona suporte para tipos escalares estendidos (ex: Date, Long) no GraphQL.
 	implementation 'com.graphql-java:graphql-java-extended-scalars:22.0'
 
-	// Hibernate
-//	implementation 'io.hypersistence:hypersistence-hibernate-65:3.8.2'
-
-	// Code Generation & Utilities (Lombok & MapStruct)
+	// --- Code Generation & Utilities ---
+	// Reduz código boilerplate (getters, setters, construtores) através de anotações.
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
+	// Ferramenta para geração de mapeadores de beans (ex: DTO <-> Entity).
 	implementation "org.mapstruct:mapstruct:${mapstructVersion}"
 	annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
-	annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0' // Para integração do Lombok com MapStruct
+	// Garante a integração correta entre Lombok e MapStruct.
+	annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
 
-	// Testing
+	// --- Testing ---
+	// Starter principal para testes, incluindo JUnit 5, Mockito e AssertJ.
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	// Utilitários para testar endpoints GraphQL.
 	testImplementation 'org.springframework.graphql:spring-graphql-test'
+	// Utilitários para testar a camada de segurança do Spring Security.
 	testImplementation 'org.springframework.security:spring-security-test'
+	// Permite a execução de testes na plataforma JUnit.
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
-
 dependencyManagement {
 	imports {
 		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"

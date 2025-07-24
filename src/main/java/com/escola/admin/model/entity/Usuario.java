@@ -43,6 +43,12 @@ public class Usuario implements UserDetails {
     @Column(nullable = false)
     boolean enabled;
 
+    // --- NOVO CAMPO ---
+    @Column(name = "precisa_alterar_senha", nullable = false)
+    @Builder.Default
+    boolean precisaAlterarSenha = false; // O padrão é false
+
+
     // Relacionamento Many-to-One com a entidade Empresa
     // O campo 'nullable = true' permite que um usuário não tenha uma empresa associada (ex: SUPER_ADMIN)
     @ManyToOne(fetch = FetchType.LAZY)

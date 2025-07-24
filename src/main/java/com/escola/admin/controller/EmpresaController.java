@@ -43,10 +43,9 @@ public class EmpresaController {
 //    @PreAuthorize("hasAnyRole('SUPER_ADMIN')")
     public Page<EmpresaResponse> fetchAllEmpresasByFilter(
             @Argument String filtro,
-            @Argument Optional<Integer> page, // Optional to handle default values from schema
-            @Argument Optional<Integer> size, // Optional to handle default values from schema
-            @Argument Optional<List<SortInput>> sort // Optional for sorting
-    ) {
+            @Argument int page,
+            @Argument int size,
+            @Argument(name = "sort") List<SortInput> sort) {
         Page<Empresa> entities = service.findByFiltro(filtro, pageableHelp.getPageable(page, size, sort)).orElse(Page.empty());
         return entities.map(mapper::toResponse);
     }
