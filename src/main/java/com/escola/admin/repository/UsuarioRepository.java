@@ -1,5 +1,6 @@
 package com.escola.admin.repository;
 
+import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Usuario;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,4 +41,13 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     )
     Optional<Page<Usuario>> findByFiltroAndEmpresa(@Param("criteria") String filtro, @Param("idEmpresa") Long idEmpresa, Pageable pageable);
 
+    /**
+     * Busca diretamente a entidade Empresa associada a um usuário,
+     * evitando LazyInitializationException.
+     *
+     * @param usuarioId O ID do usuário.
+     * @return um Optional contendo a Empresa, se existir.
+     */
+    @Query("SELECT u.empresa FROM Usuario u WHERE u.id = :usuarioId")
+    Optional<Empresa> findEmpresaByUsuarioId(@Param("usuarioId") Long usuarioId);
 }

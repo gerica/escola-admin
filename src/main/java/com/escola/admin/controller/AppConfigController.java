@@ -31,10 +31,10 @@ public class AppConfigController {
         this.appDescription = appDescription;
     }
 
-
     @QueryMapping
     public AppConfigResponse getAppConfig() {
         log.info("Executando getAppConfig..."); // Adicione um log para confirmar a execução
         return appConfigMapper.toOutput(buildProperties, appDescription);
     }
+
 }

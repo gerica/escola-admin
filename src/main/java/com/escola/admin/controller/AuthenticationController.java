@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.stereotype.Controller;
+import reactor.core.publisher.Mono;
 
 @Controller
 @RequiredArgsConstructor
@@ -20,7 +21,7 @@ public class AuthenticationController {
     AuthenticationService service;
 
     @MutationMapping
-    public AuthenticationResponse authenticate(@Argument AuthenticationRequest request) {
+    public Mono<AuthenticationResponse> authenticate(@Argument AuthenticationRequest request) {
         log.info("AuthenticationController.authenticate");
         return service.authenticate(request);
     }

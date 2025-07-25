@@ -4,6 +4,7 @@ import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.mapper.EmpresaMapper;
 import com.escola.admin.model.request.EmpresaRequest;
 import com.escola.admin.repository.EmpresaRepository;
+import com.escola.admin.repository.UsuarioRepository;
 import com.escola.admin.service.EmpresaService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.util.Optional;
 
@@ -20,6 +22,7 @@ import java.util.Optional;
 public class EmpresaServiceImpl implements EmpresaService {
 
     EmpresaRepository repository;
+    UsuarioRepository usuarioRepository;
     EmpresaMapper mapper;
 
     @Override
@@ -58,5 +61,18 @@ public class EmpresaServiceImpl implements EmpresaService {
     @Override
     public Optional<Void> delete(Empresa empresa) {
         return Optional.empty();
+    }
+
+    /**
+     * Busca a empresa associada a um usuário de forma reativa e segura.
+     *
+     * @param usuarioId O ID do usuário logado.
+     * @return um Mono contendo a Empresa ou um Mono vazio se não houver associação.
+     */
+    public Mono<Empresa> findEmpresaByUsuarioId(Long usuarioId) {
+        // Envolve a chamada bloqueante do repositório em um Mono
+        return Mono.fromCallable(() -> usuarioRepository.findEmpresaByUsuarioId(usuarioId))
+                // Desempacota o Optional para um Mono<Empresa> ou Mono.empty()
+                .flatMap(Mono::justOrEmpty);
     }
 }

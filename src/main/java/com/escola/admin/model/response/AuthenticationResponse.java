@@ -20,4 +20,5 @@ public class AuthenticationResponse {
     String lastName;
     Set<Role> roles;
     boolean precisaAlterarSenha;
+    EmpresaResponse empresa;
 }

@@ -12,7 +12,7 @@ input EmpresaRequest {
 }
 
 type EmpresaResponse {
-    id: ID!,
+    id: ID,
     nomeFantasia: String
     razaoSocial: String
     cnpj: String
@@ -44,8 +44,8 @@ extend type Query {
         size: Int = 10 # Default to size 10
         sort: [SortRequest]
     ): EmpresaResponsePage!
-
     fetchByIdEmpresa(id: ID): EmpresaResponse!
+    getInfoEmpresaUsuario: EmpresaResponse!
 }
 
 extend type Mutation {

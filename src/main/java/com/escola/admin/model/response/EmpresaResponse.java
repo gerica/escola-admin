@@ -20,4 +20,26 @@ public record EmpresaResponse(
         @JsonFormat(pattern = "yyyy-MM-dd")
         LocalDateTime dataAtualizacao
 ) {
+    /**
+     * Cria uma instância padrão para representar um usuário sem empresa associada.
+     *
+     * @return um EmpresaResponse com uma mensagem informativa.
+     */
+    public static EmpresaResponse nenhumaAssociada() {
+        return new EmpresaResponse(
+                null, // id
+                "Nenhuma empresa associada",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                null,
+                null
+                // ... outros campos como null
+        );
+    }
 }

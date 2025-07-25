@@ -42,4 +42,5 @@ public interface EmpresaMapper {
     @Mapping(target = "dataCadastro", ignore = true)
     @Mapping(target = "dataAtualizacao", ignore = true)
     Empresa updateEntity(EmpresaRequest source, @MappingTarget Empresa target);
+
 }
