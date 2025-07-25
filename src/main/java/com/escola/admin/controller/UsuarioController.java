@@ -6,7 +6,7 @@ import com.escola.admin.controller.help.SortInput;
 import com.escola.admin.model.mapper.UsuarioMapper;
 import com.escola.admin.model.request.UsuarioRequest;
 import com.escola.admin.model.response.UsuarioResponse;
-import com.escola.admin.security.BaseException;
+import com.escola.admin.exception.BaseException;
 import com.escola.admin.service.UsuarioService;
 import graphql.GraphQLException;
 import lombok.AccessLevel;

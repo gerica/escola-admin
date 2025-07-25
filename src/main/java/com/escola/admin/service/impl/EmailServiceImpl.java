@@ -1,6 +1,6 @@
 package com.escola.admin.service.impl;
 
-import com.escola.admin.security.BaseException;
+import com.escola.admin.exception.BaseException;
 import com.escola.admin.service.EmailService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;

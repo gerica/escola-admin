@@ -1,6 +1,6 @@
 package com.escola.admin.config;
 
-import com.escola.admin.security.BaseException;
+import com.escola.admin.exception.BaseException;
 import graphql.GraphQLError;
 import graphql.language.SourceLocation;
 import graphql.schema.DataFetchingEnvironment;

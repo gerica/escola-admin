@@ -1,12 +1,12 @@
 package com.escola.admin.service.impl;
 
+import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Role;
 import com.escola.admin.model.entity.TipoEmail;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.UsuarioMapper;
 import com.escola.admin.model.request.UsuarioRequest;
 import com.escola.admin.repository.UsuarioRepository;
-import com.escola.admin.security.BaseException;
 import com.escola.admin.service.EmailService;
 import com.escola.admin.service.EmpresaService;
 import com.escola.admin.service.UsuarioService;
