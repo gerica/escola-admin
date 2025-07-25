@@ -1,12 +1,13 @@
 package com.escola.admin.service.impl;
 
 import com.escola.admin.model.entity.Role;
+import com.escola.admin.model.entity.TipoEmail;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.UsuarioMapper;
 import com.escola.admin.model.request.UsuarioRequest;
-import com.escola.admin.model.response.ParametroResponse;
 import com.escola.admin.repository.UsuarioRepository;
 import com.escola.admin.security.BaseException;
+import com.escola.admin.service.EmailService;
 import com.escola.admin.service.EmpresaService;
 import com.escola.admin.service.UsuarioService;
 import com.escola.admin.util.PasswordGenerator;
@@ -18,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.graphql.client.HttpGraphQlClient;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,8 +37,8 @@ public class UsuarioServiceImpl implements UsuarioService {
     UsuarioRepository repository;
     EmpresaService empresaService;
     UsuarioMapper mapper;
+    EmailService emailService;
     PasswordEncoder passwordEncoder;
-    HttpGraphQlClient graphQlClient;
     String MUTATION_SEND_EMAIL = """
             mutation SendOnboardingEmail($request: EmailRequest!) {
               sendEmail(request: $request)
@@ -182,6 +182,38 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     @Override
+    public Mono<Void> resetPassword(String email) {
+        return Mono.defer(() ->
+                // 1. Inicia a cadeia buscando o usuário pelo e-mail de forma reativa.
+                //    Não use Mono.just() para envolver outro Mono.
+                Mono.fromCallable(() -> repository.findByEmail(email))
+                        // 2. Desempacota o Optional<Usuario> para um Mono<Usuario>.
+                        .flatMap(Mono::justOrEmpty)
+                        // 3. Se o Mono estiver vazio (usuário não encontrado), lança um erro.
+                        .switchIfEmpty(Mono.error(new BaseException("Usuário não encontrado com o e-mail informado.")))
+                        // 4. Se o usuário foi encontrado, executa a lógica de reset.
+                        .flatMap(usuario -> {
+                            // Gera uma nova senha temporária.
+                            String plainPassword = PasswordGenerator.generateDefaultPassword();
+                            usuario.setPassword(passwordEncoder.encode(plainPassword));
+                            usuario.setPrecisaAlterarSenha(true);
+
+                            // Salva o usuário e, em seguida, envia o e-mail.
+                            return Mono.fromCallable(() -> repository.save(usuario))
+                                    .flatMap(savedUser -> sendResetPasswordEmail(savedUser, plainPassword)
+                                            // Se o e-mail falhar, logamos, mas não quebramos a operação.
+                                            .onErrorResume(e -> {
+                                                log.error("Reset de senha para {} bem-sucedido, mas o envio do e-mail falhou.", savedUser.getEmail(), e);
+                                                return Mono.empty(); // Continua o fluxo sem erro.
+                                            })
+                                    );
+                        })
+                        // 5. Converte o resultado final para Mono<Void> para indicar sucesso.
+                        .then()
+        );
+    }
+
+    @Override
     public Optional<Usuario> findById(Long id) {
         return repository.findById(id);
     }
@@ -206,14 +238,6 @@ public class UsuarioServiceImpl implements UsuarioService {
         return Optional.empty();
     }
 
-    public void sendEmail() {
-        ParametroResponse response = graphQlClient.document(MUTATION_SEND_EMAIL)
-                .variable("", "")
-                .retrieve("findByChave")
-                .toEntity(ParametroResponse.class)
-                .block();
-    }
-
     // Em UsuarioServiceImpl.java
 
     /**
@@ -236,16 +260,43 @@ public class UsuarioServiceImpl implements UsuarioService {
         var emailRequest = Map.of(
                 "to", usuario.getEmail(),
                 "subject", "Seu primeiro acesso ao sistema",
-                "tipo", "ONBOARDING", // ou ONBOARDING, conforme seu Enum
+                "tipo", TipoEmail.ONBOARDING, // ou ONBOARDING, conforme seu Enum
                 "variaveis", variaveis
         );
 
         // 3. Executa a chamada GraphQL
         log.info("Enviando e-mail de boas-vindas para: {}", usuario.getEmail());
-        return graphQlClient.document(MUTATION_SEND_EMAIL)
-                .variable("request", emailRequest) // Passa o mapa como a variável $request
-                .execute() // Usamos execute() para operações que podem não ter um corpo de resposta complexo
-                .doOnError(ex -> log.error("Falha ao enviar e-mail para {}: {}", usuario.getEmail(), ex.getMessage()))
-                .then(); // Converte para Mono<Void>, indicando que a operação foi concluída.
+        return emailService.executeMutation(MUTATION_SEND_EMAIL, Map.of("request", emailRequest))
+                .doOnError(ex -> log.error("Falha ao enviar e-mail de boas-vindas para {}: {}", usuario.getEmail(), ex.getMessage()));
+    }
+
+    /**
+     * Envia um e-mail para resetar a senhao.
+     *
+     * @param usuario           O usuário que perdeu a senha.
+     * @param plainTextPassword A senha não criptografada gerada para o reset.
+     * @return um Mono<Void> que completa quando o e-mail é enviado, ou emite um erro.
+     */
+    public Mono<Void> sendResetPasswordEmail(Usuario usuario, String plainTextPassword) {
+        // 1. Monta a lista de variáveis para o template de e-mail.
+        var variaveis = List.of(
+                Map.of("key", "nomeUsuario", "value", usuario.getFirstname()),
+                Map.of("key", "senhaTemporaria", "value", plainTextPassword),
+                Map.of("key", "urlLogin", "value", "http://localhost:4200/login"), // Idealmente, viria de uma configuração
+                Map.of("key", "nomeSistema", "value", "Escola") // Idealmente, viria de uma configuração
+        );
+
+        // 2. Monta o objeto de requisição que corresponde ao `EmailRequest` no GraphQL.
+        var emailRequest = Map.of(
+                "to", usuario.getEmail(),
+                "subject", "Reiniciar Senha do usuário",
+                "tipo", TipoEmail.RESET_PASSWORD,
+                "variaveis", variaveis
+        );
+
+        // 3. Executa a chamada GraphQL
+        log.info("Enviando e-mail de resetar a senha para: {}", usuario.getEmail());
+        return emailService.executeMutation(MUTATION_SEND_EMAIL, Map.of("request", emailRequest))
+                .doOnError(ex -> log.error("Falha ao enviar e-mail de reset de senha para {}: {}", usuario.getEmail(), ex.getMessage()));
     }
 }

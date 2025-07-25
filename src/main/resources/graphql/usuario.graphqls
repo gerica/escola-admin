@@ -57,5 +57,6 @@ extend type Query {
 
 extend type Mutation {
     saveUsuario(request: UsuarioRequest!): UsuarioResponse!
-    changePassword(newPassword: String!): String!
+    changePassword(newPassword: String!): String
+    resetPassword(email: String!): String
 }

@@ -100,3 +100,7 @@ logging:
     org.springframework.security: INFO
     org.hibernate.SQL: DEBUG # Útil para ver as queries SQL geradas
     org.hibernate.type.descriptor.sql: TRACE # Útil para ver os parâmetros das queries
+    # Isso mostrará detalhes da construção da requisição e da resposta do WebClient
+    org.springframework.web.reactive.function.client.ExchangeFunctions: TRACE
+    # Isso pode ajudar a ver detalhes da codificação/decodificação do GraphQL
+    org.springframework.graphql.client: DEBUG

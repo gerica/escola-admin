@@ -20,6 +20,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
      */
     Optional<Usuario> findByUsername(String username);
 
+    Optional<Usuario> findByEmail(String email);
+
     @Query("SELECT e FROM Usuario e " +
             " WHERE (:criteria IS NULL OR :criteria = '') OR " +
             " (LOWER(e.username) LIKE LOWER(CONCAT('%', :criteria, '%')) ) OR " +

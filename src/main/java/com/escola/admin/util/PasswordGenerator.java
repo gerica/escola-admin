@@ -30,7 +30,7 @@ public final class PasswordGenerator {
      * @return A senha gerada.
      */
     public static String generateDefaultPassword() {
-        return generatePassword(DEFAULT_LENGTH, true, true, true, true);
+        return generatePassword(DEFAULT_LENGTH, true, true, true, false);
     }
 
     /**

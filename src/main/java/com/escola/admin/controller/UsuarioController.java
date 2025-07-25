@@ -119,5 +119,19 @@ public class UsuarioController {
                 .onErrorResume(e -> Mono.error(new GraphQLException("Falha ao alterar a senha: " + e.getMessage())));
     }
 
+    /**
+     * Mapeia a mutação 'resetPassword' do GraphQL.
+     * Permite que um usuário resetar a senha.
+     */
+    @MutationMapping
+    public Mono<String> resetPassword(@Argument String email) {
+        return service.resetPassword(email)
+                // O método do serviço retorna Mono<Void>.
+                // O operador .then() aguarda a conclusão e o substitui por um novo Mono.
+                .then(Mono.just("Nova senha enviada para o email."))
+                // Se o serviço retornar um erro (ex: usuário não encontrado), ele será propagado.
+                .onErrorResume(e -> Mono.error(new GraphQLException("Falha ao tentar resetar a senha: " + e.getMessage())));
+    }
+
 
 }

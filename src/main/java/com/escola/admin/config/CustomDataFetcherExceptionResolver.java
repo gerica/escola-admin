@@ -30,7 +30,7 @@ public class CustomDataFetcherExceptionResolver implements DataFetcherExceptionR
         if (exception instanceof BaseException baseException) {
             log.info("Handling BaseException: {}", baseException.getMessage());
             // ... (rest of your existing code for BaseException)
-                        SourceLocation location = null;
+            SourceLocation location = null;
             if (environment.getField() != null && environment.getField().getSourceLocation() != null) {
                 location = environment.getField().getSourceLocation();
             } else if (environment.getOperationDefinition() != null && environment.getOperationDefinition().getSourceLocation() != null) {
@@ -58,7 +58,8 @@ public class CustomDataFetcherExceptionResolver implements DataFetcherExceptionR
         // This part is for debugging purposes to see if ANY exception gets here.
         // In production, you might want Mono.empty() for unhandled exceptions.
         GraphQLError genericError = GraphQLError.newError()
-                .message("An unexpected error occurred: " + exception.getMessage())
+//                .message("An unexpected error occurred: " + exception.getMessage())
+                .message(exception.getMessage())
                 .errorType(ErrorType.INTERNAL_ERROR) // Still an internal error, but with more info
                 .build();
         return Mono.just(List.of(genericError));

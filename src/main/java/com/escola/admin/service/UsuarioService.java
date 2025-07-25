@@ -23,4 +23,6 @@ public interface UsuarioService {
     Optional<Void> delete(Usuario empresa);
 
     Mono<Void> changePassword(String newPassword);
+
+    Mono<Void> resetPassword(String email);
 }
