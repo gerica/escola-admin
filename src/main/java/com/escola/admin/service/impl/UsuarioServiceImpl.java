@@ -48,85 +48,96 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     @Transactional
     public Mono<Usuario> save(UsuarioRequest request) {
-        // 1. Encontra ou cria um usuário
-        Mono<Usuario> usuarioMono = Mono.justOrEmpty(request.id())
-                .flatMap(id -> Mono.fromCallable(() -> repository.findById(id))
-                        .flatMap(Mono::justOrEmpty))
-                .map(existingUser -> mapper.updateEntity(request, existingUser))
-                .switchIfEmpty(Mono.defer(() -> { // Usamos Mono.defer para lógica complexa
-                    // --- LÓGICA PARA NOVOS USUÁRIOS ---
-                    Usuario novoUsuario = mapper.toEntity(request);
-                    String plainPassword = PasswordGenerator.generateDefaultPassword(); // <-- Guardamos a senha aqui
-                    novoUsuario.setPassword(passwordEncoder.encode(plainPassword));
-                    novoUsuario.setPrecisaAlterarSenha(true);
+        // 1. Resolve a entidade base (nova ou existente) e a senha (se aplicável).
+        Mono<UserWithPassword> userWithPasswordMono = resolveUserWithPassword(request);
 
-                    // Após salvar, dispara o envio do e-mail
-                    return Mono.just(novoUsuario)
-                            .flatMap(userToSave -> Mono.fromCallable(() -> repository.save(userToSave)))
-                            .flatMap(savedUser -> sendOnboardingEmail(savedUser, plainPassword)
-                                    .thenReturn(savedUser) // Retorna o usuário salvo após o e-mail ser enviado
-                                    .onErrorResume(e -> {
-                                        // Se o e-mail falhar, logamos o erro mas não quebramos a criação do usuário
-                                        log.error("Criação do usuário {} bem-sucedida, mas o envio do e-mail falhou.", savedUser.getUsername(), e);
-                                        return Mono.just(savedUser);
-                                    }));
-                }));
-        return usuarioMono
-                // 2. Valida as regras de negócio e associa a empresa, se aplicável.
-                .flatMap(usuario -> {
-                    var roles = request.roles(); // Supondo que request.roles() retorna um Set<String> ou List<String>
+        // 2. Valida as regras de negócio e associa a empresa.
+        Mono<UserWithPassword> validatedMono = userWithPasswordMono
+                .flatMap(uwp -> validateAndAssociateEmpresa(uwp.usuario(), request)
+                        .map(validatedUser -> new UserWithPassword(validatedUser, uwp.plainPassword())));
 
-                    // --- INÍCIO DA NOVA LÓGICA DE VALIDAÇÃO ---
+        // 3. Persiste o usuário no banco de dados (PONTO ÚNICO DE PERSISTÊNCIA).
+        Mono<UserWithPassword> savedMono = validatedMono
+                .flatMap(uwp -> Mono.fromCallable(() -> repository.save(uwp.usuario()))
+                        .map(savedUser -> new UserWithPassword(savedUser, uwp.plainPassword())));
 
-                    // Regra 1: Se o usuário tiver mais de uma role, a empresa é obrigatória.
-                    if (roles != null && roles.size() > 1 && request.idEmpresa() == null) {
-                        return Mono.error(new BaseException("A empresa é obrigatória quando mais de uma role é atribuída ao usuário."));
-                    }
-
-                    // Regra 2: Se o usuário tiver apenas uma role e não for SUPER_ADMIN, a empresa é obrigatória.
-                    if (roles != null && roles.size() == 1 && !roles.contains(Role.SUPER_ADMIN) && request.idEmpresa() == null) {
-                        return Mono.error(new BaseException("A empresa é obrigatória para a role informada. Apenas SUPER_ADMIN pode ser criado sem empresa."));
-                    }
-
-                    // --- FIM DA NOVA LÓGICA DE VALIDAÇÃO ---
-
-                    // Se a validação passou, continua com a associação da empresa (se houver id).
-                    if (request.idEmpresa() == null) {
-                        return Mono.just(usuario); // Continua sem empresa (permitido apenas para SUPER_ADMIN único).
-                    }
-
-                    // Procura a empresa e a associa ao usuário.
-                    return Mono.fromCallable(() -> empresaService.findById(request.idEmpresa()))
-                            .flatMap(Mono::justOrEmpty) // Converte Optional<Empresa> para Mono<Empresa>
-                            .map(empresa -> {
-                                usuario.setEmpresa(empresa);
-                                return usuario;
-                            })
-                            .switchIfEmpty(Mono.error(new BaseException("Não foi encontrada nenhuma empresa com o ID fornecido.")));
-                })
-                // 3. Salva o usuário (novo ou atualizado) no banco de dados.
-                .flatMap(usuarioParaSalvar -> Mono.fromCallable(() -> repository.save(usuarioParaSalvar)))
-
-                // --- INÍCIO: Bloco para TESTAR o envio de e-mail em toda operação de salvar ---
-                .flatMap(savedUser -> {
-                    log.info("[TESTE] Disparando e-mail para o usuário: {}", savedUser.getUsername());
-                    // ATENÇÃO: A senha real não está disponível aqui para usuários existentes.
-                    // Usaremos uma senha fictícia apenas para o teste da chamada.
-                    String dummyPasswordForTest = "senha-de-teste-123";
-
-                    return sendOnboardingEmail(savedUser, dummyPasswordForTest)
-                            .thenReturn(savedUser) // Importante: retorna o usuário para continuar o fluxo
-                            .onErrorResume(e -> {
-                                // Se o envio do e-mail falhar, apenas logamos o erro, mas não quebramos a operação.
-                                log.error("[TESTE] Falha ao enviar e-mail para {}, mas o usuário foi salvo com sucesso.", savedUser.getUsername(), e);
-                                return Mono.just(savedUser); // Continua o fluxo mesmo com erro no e-mail.
-                            });
-                })
-                // --- FIM DO BLOCO DE TESTE ---
-
-                // 4. Trata erros de forma reativa.
+        // 4. Lida com efeitos colaterais (envio de e-mail) e retorna o usuário final.
+        return savedMono
+                .flatMap(this::sendOnboardingEmailIfNew)
+                .map(UserWithPassword::usuario) // Extrai apenas o usuário para o retorno final
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
                 .onErrorMap(e -> !(e instanceof BaseException), this::handleGenericException);
+    }
+
+    /**
+     * Passo 1: Determina se é uma criação ou atualização e prepara a entidade Usuario.
+     * Para novos usuários, gera e armazena a senha em texto plano temporariamente.
+     */
+    private Mono<UserWithPassword> resolveUserWithPassword(UsuarioRequest request) {
+        return Mono.justOrEmpty(request.id())
+                .flatMap(id -> Mono.fromCallable(() -> repository.findById(id))
+                        .flatMap(Mono::justOrEmpty)
+                        .map(existingUser -> {
+                            mapper.updateEntity(request, existingUser);
+                            return new UserWithPassword(existingUser, null); // Senha nula para atualizações
+                        }))
+                .switchIfEmpty(Mono.defer(() -> {
+                    Usuario novoUsuario = mapper.toEntity(request);
+                    String plainPassword = PasswordGenerator.generateDefaultPassword();
+                    novoUsuario.setPassword(passwordEncoder.encode(plainPassword));
+                    novoUsuario.setPrecisaAlterarSenha(true);
+                    return Mono.just(new UserWithPassword(novoUsuario, plainPassword));
+                }));
+    }
+
+    /**
+     * Passo 2: Aplica as regras de negócio de validação e associa a empresa se necessário.
+     */
+    private Mono<Usuario> validateAndAssociateEmpresa(Usuario usuario, UsuarioRequest request) {
+        var roles = request.roles();
+
+        // Regra 1: Se o usuário tiver mais de uma role, a empresa é obrigatória.
+        if (roles != null && roles.size() > 1 && request.idEmpresa() == null) {
+            return Mono.error(new BaseException("A empresa é obrigatória quando mais de uma role é atribuída ao usuário."));
+        }
+
+        // Regra 2: Se o usuário tiver apenas uma role e não for SUPER_ADMIN, a empresa é obrigatória.
+        if (roles != null && roles.size() == 1 && !roles.contains(Role.SUPER_ADMIN) && request.idEmpresa() == null) {
+            return Mono.error(new BaseException("A empresa é obrigatória para a role informada. Apenas SUPER_ADMIN pode ser criado sem empresa."));
+        }
+
+        // Se a validação passou, continua com a associação da empresa (se houver id).
+        if (request.idEmpresa() == null) {
+            usuario.setEmpresa(null); // Garante que a empresa seja nula se nenhum ID for passado
+            return Mono.just(usuario); // Permitido apenas para SUPER_ADMIN único.
+        }
+
+        // Procura a empresa e a associa ao usuário.
+        return Mono.fromCallable(() -> empresaService.findById(request.idEmpresa()))
+                .flatMap(Mono::justOrEmpty)
+                .map(empresa -> {
+                    usuario.setEmpresa(empresa);
+                    return usuario;
+                })
+                .switchIfEmpty(Mono.error(new BaseException("Não foi encontrada nenhuma empresa com o ID fornecido.")));
+    }
+
+    /**
+     * Passo 4: Envia o e-mail de boas-vindas se for um novo usuário.
+     */
+    private Mono<UserWithPassword> sendOnboardingEmailIfNew(UserWithPassword uwp) {
+        // A presença de uma senha em texto plano é o indicador de que é um novo usuário.
+        if (uwp.plainPassword() != null) {
+            return sendOnboardingEmail(uwp.usuario(), uwp.plainPassword())
+                    .thenReturn(uwp) // Retorna o objeto original após o e-mail ser enviado
+                    .onErrorResume(e -> {
+                        // Se o e-mail falhar, logamos o erro mas não quebramos a operação.
+                        log.error("Criação do usuário {} bem-sucedida, mas o envio do e-mail de boas-vindas falhou.", uwp.usuario().getUsername(), e);
+                        return Mono.just(uwp); // Continua o fluxo mesmo com erro no e-mail.
+                    });
+        }
+        // Se não for um novo usuário, apenas repassa o objeto.
+        return Mono.just(uwp);
     }
 
     /**
@@ -151,7 +162,8 @@ public class UsuarioServiceImpl implements UsuarioService {
         return new BaseException(errorMessage, e);
     }
 
-    // Em UsuarioServiceImpl.java
+    // ... O restante dos seus métodos (changePassword, resetPassword, etc.) permanece o mesmo ...
+    // ... Os métodos de envio de e-mail e tratamento de exceção também permanecem os mesmos ...
 
     /**
      * Encapsula exceções genéricas e inesperadas em uma BaseException.
@@ -241,15 +253,6 @@ public class UsuarioServiceImpl implements UsuarioService {
         return Optional.empty();
     }
 
-    // Em UsuarioServiceImpl.java
-
-    /**
-     * Envia um e-mail de boas-vindas para um novo usuário.
-     *
-     * @param usuario           O usuário recém-criado.
-     * @param plainTextPassword A senha não criptografada gerada para o primeiro acesso.
-     * @return um Mono<Void> que completa quando o e-mail é enviado, ou emite um erro.
-     */
     public Mono<Void> sendOnboardingEmail(Usuario usuario, String plainTextPassword) {
         // 1. Monta a lista de variáveis para o template de e-mail.
         var variaveis = List.of(
@@ -273,13 +276,6 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .doOnError(ex -> log.error("Falha ao enviar e-mail de boas-vindas para {}: {}", usuario.getEmail(), ex.getMessage()));
     }
 
-    /**
-     * Envia um e-mail para resetar a senhao.
-     *
-     * @param usuario           O usuário que perdeu a senha.
-     * @param plainTextPassword A senha não criptografada gerada para o reset.
-     * @return um Mono<Void> que completa quando o e-mail é enviado, ou emite um erro.
-     */
     public Mono<Void> sendResetPasswordEmail(Usuario usuario, String plainTextPassword) {
         // 1. Monta a lista de variáveis para o template de e-mail.
         var variaveis = List.of(
@@ -301,5 +297,12 @@ public class UsuarioServiceImpl implements UsuarioService {
         log.info("Enviando e-mail de resetar a senha para: {}", usuario.getEmail());
         return emailService.executeMutation(MUTATION_SEND_EMAIL, Map.of("request", emailRequest))
                 .doOnError(ex -> log.error("Falha ao enviar e-mail de reset de senha para {}: {}", usuario.getEmail(), ex.getMessage()));
+    }
+
+    /**
+     * Classe auxiliar interna para carregar o usuário e a senha em texto plano (se for novo)
+     * através do fluxo reativo.
+     */
+    private record UserWithPassword(Usuario usuario, String plainPassword) {
     }
 }

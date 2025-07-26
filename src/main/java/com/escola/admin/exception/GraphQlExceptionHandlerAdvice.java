@@ -59,6 +59,26 @@ public class GraphQlExceptionHandlerAdvice {
     }
 
     /**
+     * Captura exceções de negócio personalizadas (BaseException).
+     * Essas são falhas "esperadas", como erros de validação (ex: e-mail duplicado).
+     * Retorna a mensagem exata da exceção e um erro do tipo BAD_REQUEST.
+     */
+    @GraphQlExceptionHandler
+    public GraphQLError handleBaseException(BaseException ex, DataFetchingEnvironment env) {
+        // Loga como um aviso, pois é um erro de negócio, não uma falha inesperada do sistema.
+        log.warn("Erro de negócio tratado: Path [{}], Mensagem [{}]", env.getExecutionStepInfo().getPath(), ex.getMessage());
+
+        return GraphqlErrorBuilder.newError()
+                // Pega a mensagem exata da sua exceção!
+                .message(ex.getMessage())
+                // BAD_REQUEST é o tipo ideal para erros de validação e regras de negócio.
+                .errorType(ErrorType.BAD_REQUEST)
+                .path(env.getExecutionStepInfo().getPath())
+                .location(env.getField().getSourceLocation())
+                .build();
+    }
+
+    /**
      * Handler genérico (fallback) para qualquer outra exceção não tratada.
      * Isso garante que nunca vazemos stack traces ou detalhes internos para o cliente.
      * Logamos o erro completo no servidor para depuração.
