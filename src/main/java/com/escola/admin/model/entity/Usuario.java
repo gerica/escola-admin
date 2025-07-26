@@ -78,6 +78,9 @@ public class Usuario implements UserDetails {
     @Builder.Default
     Set<Role> roles = new HashSet<>();
 
+    @Transient // Importante: Este campo não será persistido no banco de dados.
+    private String impersonatorUsername;
+
 //    @Override
 //    public Collection<? extends GrantedAuthority> getAuthorities() {
 //        // Returns a list containing the user's role (e.g., "ROLE_USER")

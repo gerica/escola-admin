@@ -4,9 +4,12 @@ import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Role;
 import com.escola.admin.model.entity.TipoEmail;
 import com.escola.admin.model.entity.Usuario;
+import com.escola.admin.model.mapper.EmpresaMapper;
 import com.escola.admin.model.mapper.UsuarioMapper;
 import com.escola.admin.model.request.UsuarioRequest;
+import com.escola.admin.model.response.AuthenticationResponse;
 import com.escola.admin.repository.UsuarioRepository;
+import com.escola.admin.security.JwtService;
 import com.escola.admin.service.EmailService;
 import com.escola.admin.service.EmpresaService;
 import com.escola.admin.service.UsuarioService;
@@ -19,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -39,6 +43,8 @@ public class UsuarioServiceImpl implements UsuarioService {
     UsuarioMapper mapper;
     EmailService emailService;
     PasswordEncoder passwordEncoder;
+    EmpresaMapper empresaMapper;
+    JwtService jwtService;
     String MUTATION_SEND_EMAIL = """
             mutation SendOnboardingEmail($request: EmailRequest!) {
               sendEmail(request: $request)
@@ -299,10 +305,40 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .doOnError(ex -> log.error("Falha ao enviar e-mail de reset de senha para {}: {}", usuario.getEmail(), ex.getMessage()));
     }
 
+    @Override
+    public Mono<Map<String, Object>> impersonate(Long targetUserId, Authentication impersonatorAuth) {
+        return Mono.fromCallable(() -> repository.findById(targetUserId))
+                .flatMap(Mono::justOrEmpty)
+                .switchIfEmpty(Mono.error(new BaseException("Usuário alvo para impersonação não encontrado.")))
+                .map(targetUser -> {
+                    // Regra de negócio: SUPER_ADMIN só pode impersonar ADMIN_EMPRESA
+//                    if (!targetUser.getRoles().contains(Role.ADMIN_EMPRESA)) {
+//                        throw new BaseException("Impersonação só é permitida para usuários com a role ADMIN_EMPRESA.");
+//                    }
+                    // Gera o token especial
+                    String token = jwtService.generateImpersonationToken(targetUser, impersonatorAuth);
+
+                    AuthenticationResponse authenticationResponse = AuthenticationResponse.builder()
+                            .token(token)
+                            .username(targetUser.getUsername())
+                            .firstName(targetUser.getFirstname())
+                            .lastName(targetUser.getLastname())
+                            .roles(targetUser.getRoles())
+                            .precisaAlterarSenha(targetUser.isPrecisaAlterarSenha())
+                            .empresa(empresaMapper.toResponse(targetUser.getEmpresa())) // Associa a EmpresaResponse aqui
+                            .build();
+
+                    // Retorna o token e o usuário para o controller
+                    return Map.of("token", token, "user", authenticationResponse);
+                });
+    }
+
     /**
      * Classe auxiliar interna para carregar o usuário e a senha em texto plano (se for novo)
      * através do fluxo reativo.
      */
     private record UserWithPassword(Usuario usuario, String plainPassword) {
     }
+
+
 }

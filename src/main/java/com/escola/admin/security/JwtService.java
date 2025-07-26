@@ -7,6 +7,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -101,5 +102,67 @@ public class JwtService {
     private SecretKey getSignInKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    /**
+     * Gera um token de impersonação.
+     * O token é para o 'targetUser', mas contém claims sobre o 'impersonator'.
+     */
+    public String generateImpersonationToken(UserDetails targetUser, Authentication impersonator) {
+        Map<String, Object> extraClaims = new HashMap<>();
+        List<String> authorities = targetUser.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority) // Simplificado o map
+                .collect(Collectors.toList());
+        extraClaims.put("authorities", authorities);
+
+        // Claims padrão para o usuário-alvo
+        if (targetUser instanceof Usuario) {
+            Empresa empresa = ((Usuario) targetUser).getEmpresa();
+            if (empresa != null) {
+                extraClaims.put("empresaId", empresa.getId());
+                extraClaims.put("empresaNome", empresa.getNomeFantasia());
+            }
+        }
+
+        // Claims ESPECIAIS de impersonação
+        extraClaims.put("is_impersonated", true);
+        extraClaims.put("impersonator_username", impersonator.getName()); // Nome do SUPER_ADMIN
+
+        return Jwts.builder()
+                .claims(extraClaims)
+                .subject(targetUser.getUsername())
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .signWith(getSignInKey())
+                .compact();
+    }
+
+    /**
+     * Verifica se o token representa uma sessão de impersonação.
+     *
+     * @param token O JWT.
+     * @return true se a claim 'is_impersonated' for verdadeira, caso contrário false.
+     */
+    public Boolean isImpersonated(String token) {
+        try {
+            final Claims claims = extractAllClaims(token);
+            Boolean isImpersonated = claims.get("is_impersonated", Boolean.class);
+            return Boolean.TRUE.equals(isImpersonated);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // --- MÉTODO NOVO ---
+
+    /**
+     * Extrai o nome de usuário do SUPER_ADMIN que está impersonando.
+     *
+     * @param token O JWT de impersonação.
+     * @return O nome de usuário do impersonador, ou null se a claim não existir.
+     */
+    public String getImpersonatorUsername(String token) {
+        return extractClaim(token, claims -> claims.get("impersonator_username", String.class));
     }
 }

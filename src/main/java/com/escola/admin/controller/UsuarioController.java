@@ -7,6 +7,8 @@ import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.UsuarioMapper;
 import com.escola.admin.model.request.UsuarioRequest;
+import com.escola.admin.model.response.AuthenticationResponse;
+import com.escola.admin.model.response.ImpersonationResponse;
 import com.escola.admin.model.response.UsuarioResponse;
 import com.escola.admin.service.UsuarioService;
 import graphql.GraphQLException;
@@ -19,6 +21,7 @@ import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
@@ -140,5 +143,18 @@ public class UsuarioController {
                 .onErrorResume(e -> Mono.error(new GraphQLException("Falha ao tentar resetar a senha: " + e.getMessage())));
     }
 
+    @MutationMapping
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')") // Apenas SUPER_ADMIN pode chamar
+    public Mono<ImpersonationResponse> impersonateUser(@Argument Long id, Authentication authentication) {
+        // 'authentication' aqui é a do SUPER_ADMIN que está fazendo a chamada
+//        SecurityContextHolder.getContext().getAuthentication()
+        return service.impersonate(id, authentication)
+                .map(impersonationData -> {
+                    // O serviço retornará o token e o usuário impersonado
+                    AuthenticationResponse targetUser = (AuthenticationResponse) impersonationData.get("user");
+                    String token = impersonationData.get("token").toString();
+                    return new ImpersonationResponse(token, targetUser);
+                });
+    }
 
 }

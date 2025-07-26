@@ -24,6 +24,9 @@ public interface UsuarioMapper {
     @Mapping(target = "empresa", ignore = true)
     @Mapping(target = "password", ignore = true)
     @Mapping(target = "precisaAlterarSenha", ignore = true)
+    @Mapping(target = "impersonatorUsername", ignore = true)
+    @Mapping(target = "empresaIdFromToken", ignore = true)
+    @Mapping(target = "empresaNomeFromToken", ignore = true)
     Usuario toEntity(UsuarioRequest request);
 
     @Mapping(target = "id", ignore = true)
@@ -33,6 +36,9 @@ public interface UsuarioMapper {
     @Mapping(target = "authorities", ignore = true)
     @Mapping(target = "password", ignore = true)
     @Mapping(target = "precisaAlterarSenha", ignore = true)
+    @Mapping(target = "impersonatorUsername", ignore = true)
+    @Mapping(target = "empresaIdFromToken", ignore = true)
+    @Mapping(target = "empresaNomeFromToken", ignore = true)
     Usuario updateEntity(UsuarioRequest source, @MappingTarget Usuario target);
 
     // --- Se o problema persistir, considere este método auxiliar para debug ---

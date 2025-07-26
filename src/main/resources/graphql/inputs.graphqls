@@ -13,3 +13,9 @@ input SortRequest {
      property: String!
      direction: SortOrder!
 }
+
+#O novo token e os dados do usuário impersonado.
+type ImpersonationResponse {
+     token: String!
+     user: AuthenticationResponse!
+}

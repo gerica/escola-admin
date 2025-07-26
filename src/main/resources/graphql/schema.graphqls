@@ -8,8 +8,8 @@ type Query {
 type Mutation {
     salvarParametro(request: ParametroRequest!): ParametroResponse!
     authenticate(request: AuthenticationRequest): AuthenticationResponse!
+    impersonateUser(id: ID!): ImpersonationResponse!
 }
-
 # Se você tiver subscriptions
 # type Subscription {
 #     # Nenhuma subscription específica aqui

@@ -89,6 +89,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (userDetails instanceof Usuario) { // Verifica se é a sua classe Usuario
                     ((Usuario) userDetails).setEmpresaIdFromToken(empresaId);
                     ((Usuario) userDetails).setEmpresaNomeFromToken(empresaNome);
+
+                    Boolean isImpersonated = jwtService.isImpersonated(jwt); // Crie este método em JwtService
+                    if (isImpersonated) {
+                        String impersonatorUsername = jwtService.getImpersonatorUsername(jwt); // Crie este método
+                        ((Usuario) userDetails).setImpersonatorUsername(impersonatorUsername); // Adicione o campo @Transient em Usuario
+                        log.info("Sessão de impersonação ativa. Usuário: {}, Impersonado por: {}", userEmail, impersonatorUsername);
+                    }
                 }
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
