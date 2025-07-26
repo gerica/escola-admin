@@ -20,7 +20,6 @@ public class AppConfigController {
     AppConfigMapper appConfigMapper;
     String appDescription;
 
-
     public AppConfigController(
             BuildProperties buildProperties,
             AppConfigMapper appConfigMapper,

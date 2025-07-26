@@ -55,6 +55,12 @@ public class Usuario implements UserDetails {
     @ToString.Exclude
     Empresa empresa;
 
+    @Transient
+    private Long empresaIdFromToken;
+
+    @Transient
+    private String empresaNomeFromToken;
+
     @Column(nullable = false, updatable = false)
     LocalDateTime dataCadastro; // Data e hora de criação do registro
 

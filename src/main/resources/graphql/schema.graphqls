@@ -2,6 +2,7 @@
 type Query {
     getAppConfig: AppConfigResponse!
     findByChave(chave: String): ParametroResponse
+    getAvailableRoles: [Role!]!
 }
 
 type Mutation {

@@ -225,6 +225,9 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     public Optional<Page<Usuario>> findByFiltroAndEmpresa(String filtro, Long idEmpresa, Pageable pageable) {
+        if (idEmpresa == null) {
+            return findByFiltro(filtro, pageable);
+        }
         return repository.findByFiltroAndEmpresa(filtro, idEmpresa, pageable);
     }
 

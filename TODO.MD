@@ -7,6 +7,7 @@ No módulo de admin:
 
 No módulo de utils
 (x)  criar serviço de enviar e-mail
+( ) recuperar as roles do backend
 
 
 

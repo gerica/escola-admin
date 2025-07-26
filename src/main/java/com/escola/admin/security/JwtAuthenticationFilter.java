@@ -1,5 +1,6 @@
 package com.escola.admin.security;
 
+import com.escola.admin.model.entity.Usuario;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureException;
@@ -12,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -24,7 +24,6 @@ import org.springframework.util.PathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 @Component
@@ -75,12 +74,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String jwt = authHeader.substring(7);
         String userEmail;
+        Long empresaId = null;
+        String empresaNome = null;
 
         try {
             userEmail = jwtService.extractUsername(jwt);
+            empresaId = jwtService.getEmpresaIdFromToken(jwt);
+            empresaNome = jwtService.getEmpresaNomeFromToken(jwt);
 
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+
+                // --- NOVA LINHA: Definir o ID da empresa no UserDetails customizado ---
+                if (userDetails instanceof Usuario) { // Verifica se é a sua classe Usuario
+                    ((Usuario) userDetails).setEmpresaIdFromToken(empresaId);
+                    ((Usuario) userDetails).setEmpresaNomeFromToken(empresaNome);
+                }
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(

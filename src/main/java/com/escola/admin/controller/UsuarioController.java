@@ -3,10 +3,11 @@ package com.escola.admin.controller;
 
 import com.escola.admin.controller.help.PageableHelp;
 import com.escola.admin.controller.help.SortInput;
+import com.escola.admin.exception.BaseException;
+import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.UsuarioMapper;
 import com.escola.admin.model.request.UsuarioRequest;
 import com.escola.admin.model.response.UsuarioResponse;
-import com.escola.admin.exception.BaseException;
 import com.escola.admin.service.UsuarioService;
 import graphql.GraphQLException;
 import lombok.AccessLevel;
@@ -18,6 +19,7 @@ import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
@@ -37,7 +39,7 @@ public class UsuarioController {
      * Protegido para que apenas SUPER_ADMIN ou ADMIN possam criar/atualizar usuários.
      */
     @MutationMapping
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
     public Mono<UsuarioResponse> saveUsuario(@Argument UsuarioRequest request) { // Return type is now Mono
         return service.save(request)
                 .map(mapper::toResponse)
@@ -51,7 +53,7 @@ public class UsuarioController {
      * Protegido para que apenas usuários autenticados possam buscar por ID.
      */
     @QueryMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
     public Mono<UsuarioResponse> fetchByIdUsuario(@Argument Long id) {
         // Usamos Mono.fromCallable para executar a chamada bloqueante em um thread apropriado
         return Mono.fromCallable(() -> service.findById(id)
@@ -67,16 +69,21 @@ public class UsuarioController {
      * Protegido para que apenas SUPER_ADMIN ou ADMIN possam listar todos os usuários.
      */
     @QueryMapping
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
     public Mono<Page<UsuarioResponse>> fetchAllUsuariosByFilter(
             @Argument String filtro,
             @Argument int page,
             @Argument int size,
             @Argument(name = "sort") List<SortInput> sortRequests) {
 
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
+
         Pageable pageable = pageableHelp.getPageable(page, size, sortRequests);
 
-        return Mono.fromCallable(() -> service.findByFiltro(filtro, pageable)
+        return Mono.fromCallable(() -> service.findByFiltroAndEmpresa(filtro, usuarioAutenticado.getEmpresaIdFromToken(), pageable)
                 .map(usuarioPage -> usuarioPage.map(mapper::toResponse))
                 .orElse(Page.empty(pageable)));
     }
@@ -87,7 +94,7 @@ public class UsuarioController {
      * TODO: Adicionar uma verificação de segurança para garantir que um ADMIN só possa ver usuários da sua própria empresa.
      */
     @QueryMapping
-    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
     public Mono<Page<UsuarioResponse>> fetchAllUsuariosByFilterAndEmpresa(
             @Argument String filtro,
             @Argument Long idEmpresa,
