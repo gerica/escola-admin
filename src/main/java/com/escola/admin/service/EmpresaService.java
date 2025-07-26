@@ -10,7 +10,7 @@ import java.util.Optional;
 
 public interface EmpresaService {
 
-    Optional<Empresa> save(EmpresaRequest request);
+    Mono<Empresa> save(EmpresaRequest request);
 
     Optional<Empresa> findById(Long id);
 

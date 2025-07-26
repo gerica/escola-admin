@@ -3,6 +3,7 @@ package com.escola.admin.controller;
 
 import com.escola.admin.controller.help.PageableHelp;
 import com.escola.admin.controller.help.SortInput;
+import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.EmpresaMapper;
@@ -36,11 +37,13 @@ public class EmpresaController {
     PageableHelp pageableHelp;
 
     @MutationMapping
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
-    public EmpresaResponse saveEmpresa(@Argument EmpresaRequest request) {
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
+    public Mono<EmpresaResponse> saveEmpresa(@Argument EmpresaRequest request) {
         return service.save(request)
                 .map(mapper::toResponse)
-                .orElseThrow(() -> new RuntimeException("Não foi possível salvar a empresa. O serviço retornou um resultado vazio."));
+                .switchIfEmpty(Mono.error(new BaseException("Não foi possível salvar a empresa. O serviço retornou um resultado vazio."))) // Use switchIfEmpty for empty Mono
+                .onErrorResume(BaseException.class, Mono::error); // This isn't strictly necessary if BaseException is already Mono.error from service, but good for clarity
+
     }
 
     @QueryMapping
@@ -56,7 +59,7 @@ public class EmpresaController {
     }
 
     @QueryMapping
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
     public Optional<EmpresaResponse> fetchByIdEmpresa(@Argument Long id) {
         return service.findById(id).map(mapper::toResponse);
     }

@@ -1,14 +1,18 @@
 package com.escola.admin.service.impl;
 
+import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.mapper.EmpresaMapper;
 import com.escola.admin.model.request.EmpresaRequest;
 import com.escola.admin.repository.EmpresaRepository;
 import com.escola.admin.repository.UsuarioRepository;
 import com.escola.admin.service.EmpresaService;
+import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -19,6 +23,7 @@ import java.util.Optional;
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
+@Slf4j
 public class EmpresaServiceImpl implements EmpresaService {
 
     EmpresaRepository repository;
@@ -26,21 +31,19 @@ public class EmpresaServiceImpl implements EmpresaService {
     EmpresaMapper mapper;
 
     @Override
-    public Optional<Empresa> save(EmpresaRequest request) {
-        Empresa entity;
-        Optional<Empresa> optional = Optional.empty();
-        if (request.id() != null) {
-            optional = repository.findById(request.id());
-        }
+    @Transactional
+    public Mono<Empresa> save(EmpresaRequest request) {
+        Mono<Empresa> empresaMono = Mono.justOrEmpty(request.id())
+                .flatMap(id -> Mono.fromCallable(() -> repository.findById(id)))
+                .flatMap(Mono::justOrEmpty).map((existingEmpresa) -> {
+                    mapper.updateEntity(request, existingEmpresa);
+                    return existingEmpresa;
+                })
+                .switchIfEmpty(Mono.defer(() -> Mono.just(mapper.toEntity(request))));
 
-        if (optional.isPresent()) {
-            entity = mapper.updateEntity(request, optional.get());
-        } else {
-            entity = mapper.toEntity(request);
-//            entity.setDataCadastro(LocalDateTime.now());
-        }
-//        entity.setDataAtualizacao(LocalDateTime.now());
-        return Optional.of(repository.save(entity));
+        return empresaMono.flatMap(uwp -> Mono.fromCallable(() -> repository.save(uwp)))
+                .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
+                .onErrorMap(e -> !(e instanceof BaseException), this::handleGenericException);
     }
 
     @Override
@@ -74,5 +77,39 @@ public class EmpresaServiceImpl implements EmpresaService {
         return Mono.fromCallable(() -> usuarioRepository.findEmpresaByUsuarioId(usuarioId))
                 // Desempacota o Optional para um Mono<Empresa> ou Mono.empty()
                 .flatMap(Mono::justOrEmpty);
+    }
+
+    /**
+     * Encapsula exceções genéricas e inesperadas em uma BaseException.
+     */
+    private BaseException handleGenericException(Throwable e) {
+        log.error("Ocorreu um erro inesperado ao salvar o usuário.", e);
+        return new BaseException("Ocorreu um erro inesperado ao salvar o usuário.", e);
+    }
+
+    /**
+     * Transforma uma DataIntegrityViolationException em uma BaseException mais amigável.
+     */
+    private BaseException handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        log.warn("Violação de integridade de dados ao salvar empresa: {}", e.getMessage());
+        String message = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+        String errorMessage;
+
+        if (message.contains("duplicate key") || message.contains("unique constraint")) {
+            if (message.contains("key (nomeFantasia)")) {
+                errorMessage = "Já existe uma empresa com este nome fantasia. Por favor, escolha outro.";
+            } else if (message.contains("key (razaoSocial)")) {
+                errorMessage = "Já existe uma empresa com este razão social. Por favor, escolha outro.";
+            } else if (message.contains("key (cnpj)")) {
+                errorMessage = "Já existe uma empresa com este cnpj social. Por favor, escolha outro.";
+            } else if (message.contains("key (email)")) {
+                errorMessage = "Já existe uma empresa com este email social. Por favor, escolha outro.";
+            } else {
+                errorMessage = "Um registro com valores duplicados já existe. Verifique os campos únicos.";
+            }
+        } else {
+            errorMessage = "Erro de integridade de dados ao salvar o empresa.";
+        }
+        return new BaseException(errorMessage, e);
     }
 }
