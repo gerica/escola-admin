@@ -35,3 +35,12 @@ enum Sexo {
      HOMEM,
      MULHER
 }
+
+enum TipoContato {
+     CELULAR
+     RESIDENCIAL
+     COMERCIAL
+     WHATSAPP
+     TELEGRAM
+     OUTRO
+}

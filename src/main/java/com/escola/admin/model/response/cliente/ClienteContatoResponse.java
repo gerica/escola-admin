@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 public record ClienteContatoResponse(
         Long id,
+        String numero,
         TipoContato tipoContato,
         String observacao,
         @JsonFormat(pattern = "yyyy-MM-dd")

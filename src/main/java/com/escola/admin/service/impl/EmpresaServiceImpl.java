@@ -43,7 +43,7 @@ public class EmpresaServiceImpl implements EmpresaService {
 
         return empresaMono.flatMap(uwp -> Mono.fromCallable(() -> repository.save(uwp)))
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
-                .onErrorMap(e -> !(e instanceof BaseException), this::handleGenericException);
+                .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException);
     }
 
     @Override
@@ -79,13 +79,6 @@ public class EmpresaServiceImpl implements EmpresaService {
                 .flatMap(Mono::justOrEmpty);
     }
 
-    /**
-     * Encapsula exceções genéricas e inesperadas em uma BaseException.
-     */
-    private BaseException handleGenericException(Throwable e) {
-        log.error("Ocorreu um erro inesperado ao salvar o usuário.", e);
-        return new BaseException("Ocorreu um erro inesperado ao salvar o usuário.", e);
-    }
 
     /**
      * Transforma uma DataIntegrityViolationException em uma BaseException mais amigável.

@@ -1,12 +1,16 @@
 type ClienteContatoResponse {
     id: ID
     numero: String
+    tipoContato: TipoContato
+    observacao: String
 }
 
 input ClienteContatoRequest {
     id: ID
     idCliente: ID
     numero: String
+    tipoContato: TipoContato
+    observacao: String
 }
 
 extend type Query {

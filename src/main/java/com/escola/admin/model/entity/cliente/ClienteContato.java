@@ -27,7 +27,7 @@ public class ClienteContato {
     @JsonIgnore // Mantido para evitar loops de serialização
     Cliente cliente;
 
-    @Column(name = "numero_contato", nullable = false, length = 20) // Renomeado e adicionado restrições de nulidade e tamanho
+    @Column(name = "numero_contato", nullable = false, length = 20, unique = true) // Renomeado e adicionado restrições de nulidade e tamanho
     String numero;
 
     @Enumerated(EnumType.STRING) // Salva o nome do enum (ex: "CELULAR") no banco

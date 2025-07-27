@@ -1,5 +1,6 @@
 package com.escola.admin.controller.cliente;
 
+import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.mapper.cliente.ClienteContatoMapper;
 import com.escola.admin.model.request.cliente.ClienteContatoRequest;
 import com.escola.admin.model.response.cliente.ClienteContatoResponse;
@@ -12,6 +13,7 @@ import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Optional;
@@ -45,9 +47,12 @@ public class ClienteContatoController {
 
     @MutationMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
-    public ClienteContatoResponse saveClienteContato(@Argument ClienteContatoRequest request) {
-        var entity = service.save(request);
-        return mapper.toResponse(entity);
+    public Mono<ClienteContatoResponse> saveClienteContato(@Argument ClienteContatoRequest request) {
+        return service.save(request)
+                .map(mapper::toResponse)
+                .switchIfEmpty(Mono.error(new BaseException("Não foi possível salvar a contato. O serviço retornou um resultado vazio."))) // Use switchIfEmpty for empty Mono
+                .onErrorResume(BaseException.class, Mono::error); // This isn't strictly necessary if BaseException is already Mono.error from service, but good for clarity
+
     }
 
 }

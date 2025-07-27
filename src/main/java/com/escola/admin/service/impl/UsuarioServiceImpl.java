@@ -72,7 +72,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .flatMap(this::sendOnboardingEmailIfNew)
                 .map(UserWithPassword::usuario) // Extrai apenas o usuário para o retorno final
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
-                .onErrorMap(e -> !(e instanceof BaseException), this::handleGenericException);
+                .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException);
     }
 
     /**
@@ -166,17 +166,6 @@ public class UsuarioServiceImpl implements UsuarioService {
             errorMessage = "Erro de integridade de dados ao salvar o usuário.";
         }
         return new BaseException(errorMessage, e);
-    }
-
-    // ... O restante dos seus métodos (changePassword, resetPassword, etc.) permanece o mesmo ...
-    // ... Os métodos de envio de e-mail e tratamento de exceção também permanecem os mesmos ...
-
-    /**
-     * Encapsula exceções genéricas e inesperadas em uma BaseException.
-     */
-    private BaseException handleGenericException(Throwable e) {
-        log.error("Ocorreu um erro inesperado ao salvar o usuário.", e);
-        return new BaseException("Ocorreu um erro inesperado ao salvar o usuário.", e);
     }
 
     @Override
