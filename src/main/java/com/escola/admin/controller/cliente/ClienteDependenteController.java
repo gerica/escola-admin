@@ -37,14 +37,14 @@ public class ClienteDependenteController {
     }
 
     @MutationMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
     public boolean deleteDependenteById(@Argument Integer id) {
         var entity = service.apagar(id);
         return entity.orElse(false);
     }
 
     @MutationMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
     public ClienteDependenteResponse saveClienteDependente(@Argument ClienteDependenteRequest request) {
         var entity = service.save(request);
         return mapper.toResponse(entity);

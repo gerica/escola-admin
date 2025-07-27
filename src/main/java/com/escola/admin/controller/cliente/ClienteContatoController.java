@@ -37,14 +37,14 @@ public class ClienteContatoController {
     }
 
     @MutationMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
     public boolean deleteContatoById(@Argument Integer id) {
         var entity = service.apagar(id);
         return entity.orElse(false);
     }
 
     @MutationMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
     public ClienteContatoResponse saveClienteContato(@Argument ClienteContatoRequest request) {
         var entity = service.save(request);
         return mapper.toResponse(entity);

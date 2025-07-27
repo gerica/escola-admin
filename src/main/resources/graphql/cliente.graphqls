@@ -1,0 +1,57 @@
+input ClienteRequest {
+    id: ID
+    nome: String
+    dataNascimento: Date
+    cidade: String
+    uf: String
+    codigoCidade: String
+    docCPF: String
+    docRG: String
+    endereco: String
+    email: String
+    profissao: String
+    localTrabalho: String
+    statusCliente: String
+}
+
+type ClienteResponse {
+    id: ID! # Assuming you'll have an ID for the saved contract
+    nome: String
+    dataNascimento: Date
+    cidadeDesc: String
+    uf: String
+    codigoCidade: String
+    docCPF: String
+    docRG: String
+    endereco: String
+    email: String
+    profissao: String
+    localTrabalho: String
+    statusCliente: String
+}
+
+type ClienteResponsePage {
+    content: [ClienteResponse]
+    totalPages: Int
+    totalElements: Long
+    number: Int
+    size: Int
+    first: Boolean!
+    last: Boolean!
+    empty: Boolean!
+}
+
+extend type Query {
+    fetchAllClientes(
+        filtro: String
+        page: Int = 0 # Default to page 0
+        size: Int = 10 # Default to size 10
+        sort: [SortRequest]
+    ): ClienteResponsePage!
+
+    fetchByIdCliente(id: ID): ClienteResponse!
+}
+
+extend type Mutation {
+    saveCliente(request: ClienteRequest!): ClienteResponse!
+}

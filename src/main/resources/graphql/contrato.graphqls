@@ -1,0 +1,63 @@
+input ContratoRequest {
+    idContrato: ID
+    idCliente: ID!
+    numeroContrato: String!
+    dataInicio: Date!
+    dataFim: Date!
+    valorTotal: BigDecimal!
+    statusContrato: String!
+    descricao: String
+    termosCondicoes: String
+    dataAssinatura: Date
+    periodoPagamento: String
+    dataProximoPagamento: Date
+    observacoes: String
+    contratoDoc: String
+}
+
+type ContratoResponse {
+    idContrato: ID
+    idCliente: ID
+    nomeCliente: String
+    numeroContrato: String
+    dataInicio: Date
+    dataFim: Date
+    valorTotal: BigDecimal
+    statusContrato: String
+    descricao: String
+    termosCondicoes: String
+    dataAssinatura: Date
+    periodoPagamento: String
+    dataProximoPagamento: Date
+    observacoes: String
+    contratoDoc: String
+}
+
+type ContratoResponsePage {
+    content: [ContratoResponse]
+    totalPages: Int
+    totalElements: Long
+    number: Int
+    size: Int
+    first: Boolean!
+    last: Boolean!
+    empty: Boolean!
+}
+
+extend type Query {
+    fetchAllContratos(
+        filtro: String
+        page: Int = 0 # Default to page 0
+        size: Int = 10 # Default to size 10
+        sort: [SortRequest]
+    ): ContratoResponsePage!
+
+    fetchByIdContrato(id: ID): ContratoResponse!
+}
+
+extend type Mutation {
+    saveContrato(request: ContratoRequest!): ContratoResponse!
+    parseContrato(id: ID!): ContratoResponse!
+}
+
+

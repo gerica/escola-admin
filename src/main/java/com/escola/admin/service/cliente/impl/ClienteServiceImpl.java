@@ -43,8 +43,8 @@ public class ClienteServiceImpl implements ClienteService {
     }
 
     @Override
-    public Optional<Page<Cliente>> findByFiltro(String filtro, Pageable pageable) {
-        return clienteRepository.findByFiltro(filtro, pageable);
+    public Optional<Page<Cliente>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable) {
+        return clienteRepository.findByFiltro(filtro, idEmpresa, pageable);
     }
 
     @Override

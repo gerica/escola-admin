@@ -13,7 +13,7 @@ public interface ContratoService {
 
     Contrato save(ContratoRequest request);
 
-    Optional<Page<Contrato>> findByFiltro(String filtro, Pageable pageable);
+    Optional<Page<Contrato>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable);
 
     Optional<Contrato> findById(Long id);
 

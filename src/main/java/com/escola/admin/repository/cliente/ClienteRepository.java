@@ -12,12 +12,13 @@ import java.util.Optional;
 public interface ClienteRepository extends CrudRepository<Cliente, Integer> {
 
     @Query("SELECT e FROM Cliente e " +
-            " WHERE (:criteria IS NULL OR :criteria = '') OR " +
+            " WHERE e.empresa.id = :idEmpresa " +
+            " AND ( (:criteria IS NULL OR :criteria = '') OR " +
             " (LOWER(e.nome) LIKE LOWER(CONCAT('%', :criteria, '%')) ) OR " +
             " (LOWER(FUNCTION('TO_CHAR', e.dataNascimento, 'DD/MM/YYYY')) LIKE LOWER(CONCAT('%', :criteria, '%'))) OR" +
             " (LOWER(FUNCTION('TO_CHAR', e.dataNascimento, 'MM/YYYY')) LIKE LOWER(CONCAT('%', :criteria, '%'))) OR" +
             " (LOWER(FUNCTION('TO_CHAR', e.dataNascimento, 'YYYY')) LIKE LOWER(CONCAT('%', :criteria, '%'))) OR" +
             " (LOWER(e.docCPF) LIKE LOWER(CONCAT('%', :criteria, '%')) ) OR " +
-            " (LOWER(e.docRG) LIKE LOWER(CONCAT('%', :criteria, '%')) ) ")
-    Optional<Page<Cliente>> findByFiltro(@Param("criteria") String filtro, Pageable pageable);
+            " (LOWER(e.docRG) LIKE LOWER(CONCAT('%', :criteria, '%'))) )")
+    Optional<Page<Cliente>> findByFiltro(@Param("criteria") String filtro, @Param("idEmpresa") Long idEmpresa, Pageable pageable);
 }

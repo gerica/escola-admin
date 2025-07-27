@@ -10,7 +10,7 @@ import java.util.Optional;
 public interface ClienteService {
     Cliente save(ClienteRequest request);
 
-    Optional<Page<Cliente>> findByFiltro(String filtro, Pageable pageable);
+    Optional<Page<Cliente>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable);
 
     Optional<Cliente> findById(Integer id);
 }

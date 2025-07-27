@@ -1,5 +1,6 @@
 package com.escola.admin.model.entity.cliente;
 
+import com.escola.admin.model.entity.Empresa;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -62,5 +63,10 @@ public class Contrato {
 
     @Column(name = "contrato_documento", columnDefinition = "TEXT")
     String contratoDoc;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empresa_id", nullable = false)
+    @ToString.Exclude
+    Empresa empresa;
 
 }

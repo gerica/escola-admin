@@ -22,7 +22,6 @@ import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
@@ -77,9 +76,10 @@ public class UsuarioController {
             @Argument String filtro,
             @Argument int page,
             @Argument int size,
-            @Argument(name = "sort") List<SortInput> sortRequests) {
+            @Argument(name = "sort") List<SortInput> sortRequests,
+            Authentication authentication) {
 
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Object principal = authentication.getPrincipal();
         if (!(principal instanceof Usuario usuarioAutenticado)) {
             return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
         }

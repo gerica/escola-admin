@@ -54,7 +54,7 @@ public class ClienteInitializer {
         }
 
         criarClientesComDependentesEContatos(empresaParaVinculo); // Método único para clientes, dependentes e contatos
-        criarContratos(); // Novo método para contratos
+        criarContratos(empresaParaVinculo); // Novo método para contratos
 
         log.info("Verificação de dados iniciais (cliente) concluída.");
     }
@@ -102,7 +102,7 @@ public class ClienteInitializer {
     }
 
     // --- NOVO MÉTODO: CRIAR CONTRATOS ---
-    void criarContratos() {
+    void criarContratos(Optional<Empresa> empresaParaVinculo) {
         if (contratoRepository.count() == 0) {
             log.info("Nenhum contrato encontrado. Iniciando a criação de 25 contratos de teste...");
 
@@ -136,6 +136,7 @@ public class ClienteInitializer {
                         .periodoPagamento(getPeriodoPagamentoAleatorio())
                         .dataProximoPagamento(LocalDate.now().plusDays(random.nextInt(30)))
                         .observacoes("Observações diversas para o contrato " + (i + 1) + ".")
+                        .empresa(empresaParaVinculo.orElse(null))
                         .build();
 
                 contratos.add(contrato);

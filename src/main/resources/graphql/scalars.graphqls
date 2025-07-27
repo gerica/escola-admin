@@ -2,3 +2,4 @@
 scalar Long
 scalar DateTime
 scalar Date
+scalar BigDecimal

@@ -77,7 +77,7 @@ public class UsuarioInitializer {
     }
 
     private void criarUsuarioAdminEmpresa(Optional<Empresa> empresaOptional) {
-        if (userRepository.findByUsername("rogerio").isEmpty()) {
+        if (userRepository.findByUsername("adminempresa").isEmpty()) {
             log.info("Criando usuário 'adminempresa'...");
             Usuario adminEmpresaUser = Usuario.builder()
                     .firstname("Admin")

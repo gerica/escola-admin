@@ -11,3 +11,27 @@ enum SortOrder {
      asc
      desc
 }
+
+enum TipoParentesco {
+     CONJUGE
+     COMPANHEIRO
+     FILHO
+     FILHA
+     ENTEADO
+     ENTEADA
+     PAI
+     MAE
+     IRMAO
+     IRMA
+     AVO
+     AVO_FEM
+     NETO
+     NETA
+     TUTORADO
+     OUTRO
+}
+
+enum Sexo {
+     HOMEM,
+     MULHER
+}
