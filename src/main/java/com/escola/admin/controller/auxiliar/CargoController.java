@@ -119,7 +119,7 @@ public class CargoController {
      * @return A Mono<Void> indicating completion.
      */
     @MutationMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
     public Mono<String> deleteCargoById(@Argument Long id) {
         return cargoService.deleteById(id)
                 .then(Mono.just("Operação realizada com sucesso."))

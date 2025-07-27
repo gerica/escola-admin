@@ -3,7 +3,6 @@
 # Define o tipo Curso que será retornado pelas queries
 type CursoResponse {
     id: ID!
-    idEmpresa: ID!
     nome: String!
     descricao: String
     duracao: String!
@@ -12,7 +11,7 @@ type CursoResponse {
     ativo: Boolean!
     dataCadastro: String! # Usamos String para LocalDateTime ou um tipo Scalar de data se definido
     dataAtualizacao: String!
-    emrpesa: EmpresaResponse
+    empresa: EmpresaResponse
 }
 
 # Define o tipo de entrada para criar ou atualizar um Curso
@@ -47,7 +46,7 @@ extend type Query {
         filtro: String
         page: Int! = 0 # Valor padrão para a página
         size: Int! = 10 # Valor padrão para o tamanho da página
-        sort: [SortRequest!] # Lista de critérios de ordenação
+        sort: [SortRequest] # Lista de critérios de ordenação
     ): CursoResponsePage!
 }
 
