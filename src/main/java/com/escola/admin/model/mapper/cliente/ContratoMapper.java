@@ -23,10 +23,12 @@ public interface ContratoMapper {
      */
 //    @Mapping(target = "idContrato", ignore = true) // ID é gerado pelo banco, não vem do request
     @Mapping(target = "cliente", ignore = true)
+    @Mapping(target = "empresa", ignore = true)
     // O cliente será setado separadamente no serviço
     Contrato toEntity(ContratoRequest request);
 
     @Mapping(target = "cliente", ignore = true)
+    @Mapping(target = "empresa", ignore = true)
     Contrato updateEntity(ContratoRequest source, @MappingTarget Contrato target);
 
     /**

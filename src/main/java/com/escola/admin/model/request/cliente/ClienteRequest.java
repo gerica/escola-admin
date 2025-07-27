@@ -7,6 +7,7 @@ import java.time.LocalDate;
 
 public record ClienteRequest(
         Integer id,
+        Integer idEmpresa,
         String nome,
         LocalDate dataNascimento,
         String cidade,

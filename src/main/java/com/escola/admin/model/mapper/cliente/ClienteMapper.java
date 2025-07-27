@@ -35,6 +35,7 @@ public interface ClienteMapper {
     @Mapping(target = "contatos", ignore = true)
     @Mapping(target = "dependentes", ignore = true)
     @Mapping(target = "contratos", ignore = true)
+    @Mapping(target = "empresa", ignore = true)
     Cliente toEntity(ClienteRequest request);
 
     @Mapping(target = "id", ignore = true)
@@ -43,5 +44,6 @@ public interface ClienteMapper {
     @Mapping(target = "contatos", ignore = true)
     @Mapping(target = "dependentes", ignore = true)
     @Mapping(target = "contratos", ignore = true)
+    @Mapping(target = "empresa", ignore = true)
     Cliente updateEntity(ClienteRequest source, @MappingTarget Cliente target);
 }

@@ -1,0 +1,55 @@
+# src/main/resources/graphql/cargo.graphqls
+
+# Define o tipo Cargo que será retornado pelas queries
+type CargoResponse {
+    id: ID!
+    idEmpresa: ID!
+    nome: String!
+    descricao: String
+    ativo: Boolean!
+    dataCadastro: String! # Usamos String para LocalDateTime ou um tipo Scalar de data se definido
+    dataAtualizacao: String!
+    emrpesa: EmpresaResponse
+}
+
+# Define o tipo de entrada para criar ou atualizar um Cargo
+input CargoRequest {
+    id: ID # Opcional para criação, obrigatório para atualização
+    nome: String!
+    descricao: String
+    ativo: Boolean # Opcional, padrão 'true' se não fornecido
+}
+
+# Define a estrutura de uma página de Cargos
+type CargoResponsePage {
+    content: [CargoResponse!]!
+    totalPages: Int!
+    totalElements: Long!
+    number: Int! # Número da página atual
+    size: Int! # Tamanho da página
+    first: Boolean!
+    last: Boolean!
+    empty: Boolean!
+}
+
+
+extend type Query {
+    # Busca um cargo pelo seu ID
+    fetchByIdCargo(id: ID!): CargoResponse
+
+    # Busca uma lista paginada de cargos, com filtro opcional
+    fetchAllCargos(
+        filtro: String
+        page: Int! = 0 # Valor padrão para a página
+        size: Int! = 10 # Valor padrão para o tamanho da página
+        sort: [SortRequest!] # Lista de critérios de ordenação
+    ): CargoResponsePage!
+}
+
+extend type Mutation {
+    # Salva (cria ou atualiza) um cargo
+    saveCargo(request: CargoRequest!): CargoResponse!
+
+    # Exclui um cargo pelo seu ID
+    deleteCargoById(id: ID!): String
+}

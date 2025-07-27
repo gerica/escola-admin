@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 
 public record ContratoRequest(
         Long idContrato, // O ID do cliente é essencial para associar o contrato
+        Long idEmpresa, // O ID do cliente é essencial para associar o contrato
 
         @NotNull(message = "O ID do cliente não pode ser nulo.")
         Long idCliente, // O ID do cliente é essencial para associar o contrato

@@ -1,0 +1,60 @@
+# src/main/resources/graphql/curso.graphqls
+
+# Define o tipo Curso que será retornado pelas queries
+type CursoResponse {
+    id: ID!
+    idEmpresa: ID!
+    nome: String!
+    descricao: String
+    duracao: String!
+    categoria: String
+    valorMensalidade: Float!
+    ativo: Boolean!
+    dataCadastro: String! # Usamos String para LocalDateTime ou um tipo Scalar de data se definido
+    dataAtualizacao: String!
+    emrpesa: EmpresaResponse
+}
+
+# Define o tipo de entrada para criar ou atualizar um Curso
+input CursoRequest {
+    id: ID # Opcional para criação, obrigatório para atualização
+    nome: String!
+    descricao: String
+    duracao: String!
+    categoria: String
+    valorMensalidade: Float!
+    ativo: Boolean # Opcional, padrão 'true' se não fornecido
+}
+
+# Define a estrutura de uma página de Cursos
+type CursoResponsePage {
+    content: [CursoResponse!]!
+    totalPages: Int!
+    totalElements: Long!
+    number: Int! # Número da página atual
+    size: Int! # Tamanho da página
+    first: Boolean!
+    last: Boolean!
+    empty: Boolean!
+}
+
+extend type Query {
+    # Busca um curso pelo seu ID
+    fetchByIdCurso(id: ID!): CursoResponse
+
+    # Busca uma lista paginada de cursos, com filtro opcional
+    fetchAllCursos(
+        filtro: String
+        page: Int! = 0 # Valor padrão para a página
+        size: Int! = 10 # Valor padrão para o tamanho da página
+        sort: [SortRequest!] # Lista de critérios de ordenação
+    ): CursoResponsePage!
+}
+
+extend type Mutation {
+    # Salva (cria ou atualiza) um curso
+    saveCurso(request: CursoRequest!): CursoResponse!
+
+    # Exclui um curso pelo seu ID
+    deleteCursoById(id: ID!): String
+}

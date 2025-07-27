@@ -12,7 +12,7 @@ public interface EmpresaService {
 
     Mono<Empresa> save(EmpresaRequest request);
 
-    Optional<Empresa> findById(Long id);
+    Mono<Empresa> findById(Long id);
 
     Optional<Page<Empresa>> findByFiltro(String filtro, Pageable pageable);
 

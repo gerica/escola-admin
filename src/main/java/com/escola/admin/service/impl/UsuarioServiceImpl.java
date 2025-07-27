@@ -118,14 +118,12 @@ public class UsuarioServiceImpl implements UsuarioService {
             return Mono.just(usuario); // Permitido apenas para SUPER_ADMIN único.
         }
 
-        // Procura a empresa e a associa ao usuário.
-        return Mono.fromCallable(() -> empresaService.findById(request.idEmpresa()))
-                .flatMap(Mono::justOrEmpty)
-                .map(empresa -> {
+        return empresaService.findById(request.idEmpresa())
+                .switchIfEmpty(Mono.error(new BaseException("Não foi encontrada nenhuma empresa com o ID fornecido.")))
+                .flatMap(empresa -> {
                     usuario.setEmpresa(empresa);
-                    return usuario;
-                })
-                .switchIfEmpty(Mono.error(new BaseException("Não foi encontrada nenhuma empresa com o ID fornecido.")));
+                    return Mono.just(usuario); // You need to return a Mono from flatMap
+                });
     }
 
     /**

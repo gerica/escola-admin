@@ -24,7 +24,6 @@ import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.Optional;
 
 @Controller
 @RequiredArgsConstructor
@@ -60,7 +59,7 @@ public class EmpresaController {
 
     @QueryMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
-    public Optional<EmpresaResponse> fetchByIdEmpresa(@Argument Long id) {
+    public Mono<EmpresaResponse> fetchByIdEmpresa(@Argument Long id) {
         return service.findById(id).map(mapper::toResponse);
     }
 

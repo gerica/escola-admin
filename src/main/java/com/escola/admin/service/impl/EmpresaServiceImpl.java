@@ -47,8 +47,19 @@ public class EmpresaServiceImpl implements EmpresaService {
     }
 
     @Override
-    public Optional<Empresa> findById(Long id) {
-        return repository.findById(id);
+    public Mono<Empresa> findById(Long id) {
+        log.info("Buscando empresa por ID: {}", id);
+        return Mono.fromCallable(() -> repository.findById(id))
+                .flatMap(optionalCargo -> {
+                    if (optionalCargo.isPresent()) {
+                        log.info("Cargo encontrado com sucesso para ID: {}", id);
+                        return Mono.just(optionalCargo.get());
+                    } else {
+                        log.warn("Nenhum empresa encontrado para o ID: {}", id);
+                        return Mono.empty();
+                    }
+                })
+                .doOnError(e -> log.error("Erro ao buscar cargo por ID {}: {}", id, e.getMessage(), e));
     }
 
     @Override

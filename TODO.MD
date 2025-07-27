@@ -9,5 +9,9 @@ No módulo de utils
 (x)  criar serviço de enviar e-mail
 (x) recuperar as roles do backend
 
+Tabelas auxiliares
+( )  curso
+( )  cargos
+
 
 
