@@ -60,6 +60,9 @@ dependencies {
 	// Adiciona suporte para tipos escalares estendidos (ex: Date, Long) no GraphQL.
 	implementation 'com.graphql-java:graphql-java-extended-scalars:22.0'
 
+	// SDK oficial do Google para interagir com a API do Gemini.
+	implementation 'com.google.genai:google-genai:1.0.0'
+
 	// --- Code Generation & Utilities ---
 	// Reduz código boilerplate (getters, setters, construtores) através de anotações.
 	compileOnly 'org.projectlombok:lombok'

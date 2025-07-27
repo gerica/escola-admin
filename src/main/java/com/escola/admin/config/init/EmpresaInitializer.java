@@ -36,7 +36,7 @@ public class EmpresaInitializer {
         for (int i = 1; i <= NUM_EMPRESAS_TO_CREATE; i++) {
             String nomeFantasia = "Empresa Teste " + i;
             // Verifica se a empresa já existe para evitar duplicatas em reinícios do app
-            Optional<Page<Empresa>> byFiltro = service.findByFiltro(nomeFantasia, pageableHelp.getPageable(0, 10, new ArrayList<>()));
+            Optional<Page<Empresa>> byFiltro = service.findByFiltro(nomeFantasia, pageableHelp.getPageable(0, 1, new ArrayList<>()));
             if (byFiltro.isPresent() && byFiltro.get().getSize() > 0) {
                 log.info("Criando empresa: {}", nomeFantasia);
 
@@ -64,7 +64,7 @@ public class EmpresaInitializer {
                         true);
 
                 try {
-                    service.save(request);
+                    service.save(request).block();
                     log.info(">>> Empresa '{}' criada com sucesso.", nomeFantasia);
                 } catch (Exception e) {
                     log.error("Erro ao salvar a empresa '{}': {}", nomeFantasia, e.getMessage());
