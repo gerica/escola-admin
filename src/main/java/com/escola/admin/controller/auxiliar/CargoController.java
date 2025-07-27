@@ -3,6 +3,7 @@ package com.escola.admin.controller.auxiliar;
 import com.escola.admin.controller.help.PageableHelp;
 import com.escola.admin.controller.help.SortInput;
 import com.escola.admin.exception.BaseException;
+import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.auxiliar.CargoMapper;
 import com.escola.admin.model.request.auxiliar.CargoRequest;
 import com.escola.admin.model.response.auxiliar.CargoResponse;
@@ -17,6 +18,7 @@ import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
@@ -40,10 +42,23 @@ public class CargoController {
      * @return The saved or updated Cargo as a CargoResponse.
      */
     @MutationMapping
-    @PreAuthorize("isAuthenticated()")
-    public Mono<CargoResponse> saveCargo(@Argument CargoRequest request) {
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
+    public Mono<CargoResponse> saveCargo(@Argument CargoRequest request, Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
+        // Create a new CargoRequest with the updated idEmpresa
+        CargoRequest updatedRequest = new CargoRequest(
+                request.id(),
+                usuarioAutenticado.getEmpresaIdFromToken(), // Set the idEmpresa here
+                request.nome(),
+                request.descricao(),
+                request.ativo()
+        );
+
         // The service method returns Mono<Cargo>, so we map it to CargoResponse
-        return cargoService.save(request)
+        return cargoService.save(updatedRequest)
                 .map(cargoMapper::toResponse)
                 .switchIfEmpty(Mono.error(new BaseException("Não foi possível salvar cardo. O serviço retornou um resultado vazio."))) // Use switchIfEmpty for empty Mono
                 .onErrorResume(BaseException.class, Mono::error); // This isn't strictly necessary if BaseException is already Mono.error from service, but good for clarity

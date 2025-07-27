@@ -3,6 +3,7 @@ package com.escola.admin.controller.auxiliar;
 import com.escola.admin.controller.help.PageableHelp;
 import com.escola.admin.controller.help.SortInput;
 import com.escola.admin.exception.BaseException;
+import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.auxiliar.CursoMapper;
 import com.escola.admin.model.request.auxiliar.CursoRequest;
 import com.escola.admin.model.response.auxiliar.CursoResponse;
@@ -17,6 +18,7 @@ import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
@@ -40,9 +42,24 @@ public class CursoController {
      * @return The saved or updated Curso as a CursoResponse.
      */
     @MutationMapping
-    @PreAuthorize("isAuthenticated()")
-    public Mono<CursoResponse> saveCurso(@Argument CursoRequest request) {
-        return cursoService.save(request)
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
+    public Mono<CursoResponse> saveCurso(@Argument CursoRequest request, Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
+        // Create a new CargoRequest with the updated idEmpresa
+        CursoRequest updatedRequest = new CursoRequest(
+                request.id(),
+                usuarioAutenticado.getEmpresaIdFromToken(), // Set the idEmpresa here
+                request.nome(),
+                request.descricao(),
+                request.duracao(),
+                request.categoria(),
+                request.valorMensalidade(),
+                request.ativo()
+        );
+        return cursoService.save(updatedRequest)
                 .map(cursoMapper::toResponse)
                 .switchIfEmpty(Mono.error(new BaseException("Não foi possível salvar curso. O serviço retornou um resultado vazio.")))
                 .onErrorResume(BaseException.class, Mono::error);
