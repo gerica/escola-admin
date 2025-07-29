@@ -1,6 +1,7 @@
 package com.escola.admin.service.cliente.impl;
 
 import com.escola.admin.model.entity.cliente.Cliente;
+import com.escola.admin.model.entity.cliente.StatusCliente;
 import com.escola.admin.model.mapper.cliente.ClienteMapper;
 import com.escola.admin.model.request.cliente.ClienteRequest;
 import com.escola.admin.repository.cliente.ClienteRepository;
@@ -45,6 +46,16 @@ public class ClienteServiceImpl implements ClienteService {
     @Override
     public Optional<Page<Cliente>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable) {
         return clienteRepository.findByFiltro(filtro, idEmpresa, pageable);
+    }
+
+    @Override
+    public Optional<Page<Cliente>> findAtivosByFiltro(String filtro, Long idEmpresa, Pageable pageable) {
+        return clienteRepository.findByStatusClienteAndFiltro(filtro, idEmpresa, StatusCliente.ATIVO, pageable);
+    }
+
+    @Override
+    public Optional<Page<Cliente>> findAllClientsByStatusAndFiltroWithDependents(String filtro, Long idEmpresa, Pageable pageable) {
+        return clienteRepository.findAllClientsByStatusWithDependents(filtro, idEmpresa, StatusCliente.ATIVO, pageable);
     }
 
     @Override

@@ -65,8 +65,8 @@ public class Cliente {
 
     // Campos de Auditoria - Boas práticas para rastreabilidade
     @CreationTimestamp // Preenche automaticamente com a data e hora de criação
-    @Column(name = "data_cadastro", nullable = false, updatable = false) // Não pode ser atualizado após a criação
-            LocalDateTime dataCadastro;
+    @Column(name = "data_cadastro", nullable = false, updatable = false)
+    LocalDateTime dataCadastro;
 
     @UpdateTimestamp // Preenche automaticamente com a data e hora da última atualização
     @Column(name = "data_atualizacao", nullable = false)

@@ -44,3 +44,21 @@ enum TipoContato {
      TELEGRAM
      OUTRO
 }
+
+enum StatusTurma{
+     ATIVA,
+     INATIVA,
+     LOTADA,
+     EM_FORMACAO,
+     CANCELADA
+}
+
+enum DayOfWeek{
+     MONDAY
+     TUESDAY
+     WEDNESDAY
+     THURSDAY
+     FRIDAY
+     SATURDAY
+     SUNDAY
+}

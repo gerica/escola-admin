@@ -13,4 +13,8 @@ public interface ClienteService {
     Optional<Page<Cliente>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable);
 
     Optional<Cliente> findById(Integer id);
+
+    Optional<Page<Cliente>> findAtivosByFiltro(String filtro, Long empresaIdFromToken, Pageable pageable);
+
+    Optional<Page<Cliente>> findAllClientsByStatusAndFiltroWithDependents(String filtro, Long empresaIdFromToken, Pageable pageable);
 }

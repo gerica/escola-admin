@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record ClienteResponse(
         Long id,
@@ -24,7 +25,8 @@ public record ClienteResponse(
         @JsonFormat(pattern = "yyyy-MM-dd")
         LocalDateTime dataCadastro,
         @JsonFormat(pattern = "yyyy-MM-dd")
-        LocalDateTime dataAtualizacao
+        LocalDateTime dataAtualizacao,
+        List<ClienteDependenteResponse> dependentes
 
 ) {
 }

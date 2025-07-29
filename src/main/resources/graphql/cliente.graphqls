@@ -30,8 +30,36 @@ type ClienteResponse {
     statusCliente: String
 }
 
+type ClienteWithDependentsResponse {
+    id: ID! # Assuming you'll have an ID for the saved contract
+    nome: String
+    dataNascimento: Date
+    cidadeDesc: String
+    uf: String
+    codigoCidade: String
+    docCPF: String
+    docRG: String
+    endereco: String
+    email: String
+    profissao: String
+    localTrabalho: String
+    statusCliente: String
+    dependentes: [ClienteDependenteResponse]
+}
+
 type ClienteResponsePage {
     content: [ClienteResponse]
+    totalPages: Int
+    totalElements: Long
+    number: Int
+    size: Int
+    first: Boolean!
+    last: Boolean!
+    empty: Boolean!
+}
+
+type ClienteResponseWithDependentsPage {
+    content: [ClienteWithDependentsResponse]
     totalPages: Int
     totalElements: Long
     number: Int
@@ -48,6 +76,20 @@ extend type Query {
         size: Int = 10 # Default to size 10
         sort: [SortRequest]
     ): ClienteResponsePage!
+
+    fetchAllClientesAtivos(
+        filtro: String
+        page: Int = 0 # Default to page 0
+        size: Int = 10 # Default to size 10
+        sort: [SortRequest]
+    ): ClienteResponsePage!
+
+    fetchAllClientsByStatusAndFiltroWithDependents(
+        filtro: String
+        page: Int = 0 # Default to page 0
+        size: Int = 10 # Default to size 10
+        sort: [SortRequest]
+    ): ClienteResponseWithDependentsPage!
 
     fetchByIdCliente(id: ID): ClienteResponse!
 }

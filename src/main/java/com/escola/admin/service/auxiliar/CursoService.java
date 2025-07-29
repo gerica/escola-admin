@@ -16,6 +16,8 @@ public interface CursoService {
 
     Optional<Page<Curso>> findByFiltro(String filtro, Pageable pageable);
 
+    Optional<Page<Curso>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable);
+
     Mono<Void> deleteById(Long id);
 
     Mono<Void> delete(Curso entity);

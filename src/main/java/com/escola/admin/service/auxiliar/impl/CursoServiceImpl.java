@@ -116,6 +116,23 @@ public class CursoServiceImpl implements CursoService {
     }
 
     @Override
+    public Optional<Page<Curso>> findByFiltro(String filtro,Long idEmpresa, Pageable pageable) {
+        log.info("Buscando cursos por filtro '{}' com paginação: {}", filtro, pageable);
+        try {
+            Optional<Page<Curso>> result = repository.findByFiltro(filtro, idEmpresa, pageable);
+            if (result.isPresent()) {
+                log.info("Encontrados {} cursos paginados para o filtro '{}'.", result.get().getTotalElements(), filtro);
+            } else {
+                log.warn("Nenhum resultado de paginação para o filtro '{}'.", filtro);
+            }
+            return result;
+        } catch (Exception e) {
+            log.error("Erro ao buscar cursos por filtro '{}' e paginação {}: {}", filtro, pageable, e.getMessage(), e);
+            throw e; // Re-lança a exceção após logar
+        }
+    }
+
+    @Override
     public Mono<Void> deleteById(Long id) {
         log.info("Solicitada exclusão de curso por ID: {}", id);
         return Mono.fromRunnable(() -> repository.deleteById(id))

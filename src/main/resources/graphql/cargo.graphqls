@@ -1,5 +1,3 @@
-# src/main/resources/graphql/cargo.graphqls
-
 # Define o tipo Cargo que será retornado pelas queries
 type CargoResponse {
     id: ID!

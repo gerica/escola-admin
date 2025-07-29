@@ -1,0 +1,64 @@
+# Define o tipo Turma que será retornado pelas queries
+type TurmaResponse {
+    id: ID!
+    curso: CursoResponse
+    empresa: EmpresaResponse
+    nome: String
+    codigo: String
+    capacidadeMaxima: ID
+    status: StatusTurma
+    anoPeriodo: String
+    horarioInicio: String,
+    horarioFim: String,
+    diasDaSemana: [DayOfWeek]
+    professor: String
+}
+
+# Define o tipo de entrada para criar ou atualizar um Turma
+input TurmaRequest {
+    id: ID
+    idCurso: ID!
+    nome: String
+    codigo: String
+    capacidadeMaxima: ID
+    status: StatusTurma
+    anoPeriodo: String
+    horarioInicio: LocalTime,
+    horarioFim: LocalTime,
+    diasDaSemana: [DayOfWeek]
+    professor: String
+}
+
+# Define a estrutura de uma página de Turmas
+type TurmaResponsePage {
+    content: [TurmaResponse!]!
+    totalPages: Int!
+    totalElements: Long!
+    number: Int! # Número da página atual
+    size: Int! # Tamanho da página
+    first: Boolean!
+    last: Boolean!
+    empty: Boolean!
+}
+
+
+extend type Query {
+    # Busca um cargo pelo seu ID
+    fetchByIdTurma(id: ID!): TurmaResponse
+
+    # Busca uma lista paginada de cargos, com filtro opcional
+    fetchAllTurmas(
+        filtro: String
+        page: Int! = 0 # Valor padrão para a página
+        size: Int! = 10 # Valor padrão para o tamanho da página
+        sort: [SortRequest] # Lista de critérios de ordenação
+    ): TurmaResponsePage!
+}
+
+extend type Mutation {
+    # Salva (cria ou atualiza) um cargo
+    saveTurma(request: TurmaRequest!): TurmaResponse!
+
+    # Exclui um cargo pelo seu ID
+    deleteTurmaById(id: ID!): String
+}

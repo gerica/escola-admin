@@ -16,6 +16,7 @@ public class DataInitializer implements CommandLineRunner {
     UsuarioInitializer usuarioInitializer;
     EmpresaInitializer empresaInitializer;
     ClienteInitializer clienteInitializer;
+    AuxiliarInitializer auxiliarInitializer;
 
     @Override
     public void run(String... args) {
@@ -23,6 +24,7 @@ public class DataInitializer implements CommandLineRunner {
         empresaInitializer.carga();
         usuarioInitializer.carga();
         clienteInitializer.carga();
+        auxiliarInitializer.carga();
         log.info("Verificação de dados iniciais concluída.");
     }
 }

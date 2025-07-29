@@ -18,5 +18,13 @@ public interface CursoRepository extends CrudRepository<Curso, Long> {
             " (LOWER(e.descricao) LIKE LOWER(CONCAT('%', :criteria, '%')) ) ")
     Optional<Page<Curso>> findByFiltro(@Param("criteria") String filtro, Pageable pageable);
 
+    @Query("SELECT e FROM Curso e " +
+            " WHERE e.empresa.id = :idEmpresa " +
+            " AND ( (:criteria IS NULL OR :criteria = '') OR " +
+            " (LOWER(e.nome) LIKE LOWER(CONCAT('%', :criteria, '%')) ) OR " +
+            " (LOWER(e.categoria) LIKE LOWER(CONCAT('%', :criteria, '%')) ) OR " +
+            " (LOWER(e.descricao) LIKE LOWER(CONCAT('%', :criteria, '%'))) ) ")
+    Optional<Page<Curso>> findByFiltro(@Param("criteria") String filtro, @Param("idEmpresa") Long idEmpresa, @Param("pageable") Pageable pageable);
+
 
 }

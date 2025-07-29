@@ -27,6 +27,8 @@ public class GraphQLConfig {
                 .scalar(ExtendedScalars.Date)
                 // Para o tipo Long.
                 .scalar(ExtendedScalars.GraphQLLong)
+                // Para o tipo LocalTime.
+                .scalar(ExtendedScalars.LocalTime)
                 .scalar(bigDecimalScalar());
     }
 

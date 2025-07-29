@@ -9,24 +9,35 @@ import java.util.List;
 
 @Mapper(
         componentModel = MappingConstants.ComponentModel.SPRING,
-        unmappedTargetPolicy = ReportingPolicy.WARN
+        unmappedTargetPolicy = ReportingPolicy.WARN,
+        uses = {ClienteDependenteMapper.class} // Make sure this is present and correct
 )
 public interface ClienteMapper {
 
     @Named("formatCPF")
     static String formatCpf(String cpf) {
-        // Verifica se o CPF é nulo ou não tem 11 dígitos
         if (cpf == null || cpf.length() != 11) {
-            return cpf; // Retorna o valor original se inválido
+            return cpf;
         }
-        // Aplica a máscara XXX.XXX.XXX-XX
         return cpf.replaceAll("(\\d{3})(\\d{3})(\\d{3})(\\d{2})", "$1.$2.$3-$4");
     }
 
+    @Named("toClienteResponseWithoutDependents")
     @Mapping(target = "cidadeDesc", source = "cidade")
+    @Mapping(target = "dependentes", ignore = true)
     ClienteResponse toResponse(Cliente entity);
 
-    List<ClienteResponse> toResponseList(List<Cliente> empresas);
+    @Named("toClienteResponseWithDependents")
+    @Mapping(target = "cidadeDesc", source = "cidade")
+    ClienteResponse toResponseComDependentes(Cliente entity);
+
+    // If you want a list of clients WITHOUT dependents:
+    @IterableMapping(qualifiedByName = "toClienteResponseWithoutDependents")
+    List<ClienteResponse> toResponseList(List<Cliente> clientes);
+
+    // If you want a separate method for a list of clients WITH dependents:
+    @IterableMapping(qualifiedByName = "toClienteResponseWithDependents")
+    List<ClienteResponse> toResponseListWithDependents(List<Cliente> clientes);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "docCPF", source = "docCPF", qualifiedByName = "formatCPF")

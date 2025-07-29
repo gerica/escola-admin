@@ -64,6 +64,48 @@ public class ClienteController {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
+    public Mono<Page<ClienteResponse>> fetchAllClientesAtivos(
+            @Argument String filtro,
+            @Argument int page,
+            @Argument int size,
+            @Argument(name = "sort") List<SortInput> sortRequests,
+            Authentication authentication) {
+
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
+
+        Pageable pageable = pageableHelp.getPageable(page, size, sortRequests);
+
+        return Mono.fromCallable(() -> clienteService.findAtivosByFiltro(filtro, usuarioAutenticado.getEmpresaIdFromToken(), pageable)
+                .map(usuarioPage -> usuarioPage.map(clienteMapper::toResponse))
+                .orElse(Page.empty(pageable)));
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    public Mono<Page<ClienteResponse>> fetchAllClientsByStatusAndFiltroWithDependents(
+            @Argument String filtro,
+            @Argument int page,
+            @Argument int size,
+            @Argument(name = "sort") List<SortInput> sortRequests,
+            Authentication authentication) {
+
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
+
+        Pageable pageable = pageableHelp.getPageable(page, size, sortRequests);
+
+        return Mono.fromCallable(() -> clienteService.findAllClientsByStatusAndFiltroWithDependents(filtro, usuarioAutenticado.getEmpresaIdFromToken(), pageable)
+                .map(usuarioPage -> usuarioPage.map(clienteMapper::toResponseComDependentes))
+                .orElse(Page.empty(pageable)));
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
     public Optional<ClienteResponse> fetchByIdCliente(@Argument Integer id) {
         return clienteService.findById(id).map(clienteMapper::toResponse);
     }
