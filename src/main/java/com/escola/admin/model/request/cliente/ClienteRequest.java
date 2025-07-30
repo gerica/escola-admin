@@ -6,7 +6,7 @@ import com.escola.admin.model.entity.cliente.StatusCliente;
 import java.time.LocalDate;
 
 public record ClienteRequest(
-        Integer id,
+        Long id,
         Integer idEmpresa,
         String nome,
         LocalDate dataNascimento,

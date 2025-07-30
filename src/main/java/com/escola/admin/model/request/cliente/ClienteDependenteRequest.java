@@ -7,8 +7,8 @@ import com.escola.admin.model.entity.cliente.TipoParentesco;
 import java.time.LocalDate;
 
 public record ClienteDependenteRequest(
-        Integer id,
-        Integer idCliente,
+        Long id,
+        Long idCliente,
         String nome,
         String docCPF,
         Sexo sexo,

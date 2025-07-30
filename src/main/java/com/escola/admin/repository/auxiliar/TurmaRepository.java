@@ -12,9 +12,10 @@ import java.util.Optional;
 public interface TurmaRepository extends CrudRepository<Turma, Long> {
 
     @Query("SELECT e FROM Turma e " +
-            " WHERE (:criteria IS NULL OR :criteria = '') OR " +
+            " WHERE e.empresa.id = :idEmpresa " +
+            " AND ( (:criteria IS NULL OR :criteria = '') OR " +
             " (LOWER(e.nome) LIKE LOWER(CONCAT('%', :criteria, '%')) ) OR " +
             " (LOWER(e.codigo) LIKE LOWER(CONCAT('%', :criteria, '%')) ) OR " +
-            " (LOWER(e.professor) LIKE LOWER(CONCAT('%', :criteria, '%')) ) ")
-    Optional<Page<Turma>> findByFiltro(@Param("criteria") String filtro, Pageable pageable);
+            " (LOWER(e.professor) LIKE LOWER(CONCAT('%', :criteria, '%'))) ) ")
+    Optional<Page<Turma>> findByFiltro(@Param("criteria") String filtro, @Param("idEmpresa") Long idEmpresa, Pageable pageable);
 }

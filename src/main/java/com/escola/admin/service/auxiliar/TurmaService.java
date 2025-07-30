@@ -14,7 +14,7 @@ public interface TurmaService {
 
     Mono<Turma> findById(Long id);
 
-    Optional<Page<Turma>> findByFiltro(String filtro, Pageable pageable);
+    Optional<Page<Turma>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable);
 
     Mono<Void> deleteById(Long id);
 

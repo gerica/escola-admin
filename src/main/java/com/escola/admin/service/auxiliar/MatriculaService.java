@@ -1,0 +1,23 @@
+package com.escola.admin.service.auxiliar;
+
+import com.escola.admin.model.entity.auxiliar.Matricula;
+import com.escola.admin.model.request.auxiliar.MatriculaRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import reactor.core.publisher.Mono;
+
+import java.util.Optional;
+
+public interface MatriculaService {
+
+    Mono<Matricula> save(MatriculaRequest request);
+
+    Mono<Matricula> findById(Long id);
+
+    Optional<Page<Matricula>> findByTurma(Long idTurma, Pageable pageable);
+
+    Mono<Void> deleteById(Long id);
+
+    Mono<Void> delete(Matricula entity);
+
+}

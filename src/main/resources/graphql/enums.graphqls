@@ -62,3 +62,12 @@ enum DayOfWeek{
      SATURDAY
      SUNDAY
 }
+
+enum StatusMatricula{
+     ATIVA
+     ABERTA
+     INATIVA
+     CONCLUIDA
+     TRANCADA
+     CANCELADA
+}

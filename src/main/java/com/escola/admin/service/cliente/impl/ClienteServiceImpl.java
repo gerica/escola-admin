@@ -9,9 +9,11 @@ import com.escola.admin.service.cliente.ClienteService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -19,6 +21,7 @@ import java.util.Optional;
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
+@Slf4j
 public class ClienteServiceImpl implements ClienteService {
 
     ClienteRepository clienteRepository;
@@ -59,7 +62,18 @@ public class ClienteServiceImpl implements ClienteService {
     }
 
     @Override
-    public Optional<Cliente> findById(Integer id) {
-        return clienteRepository.findById(id);
+    public Mono<Cliente> findById(Long id) {
+        log.info("Buscando Cliente por ID: {}", id);
+        return Mono.fromCallable(() -> clienteRepository.findById(id))
+                .flatMap(optionalCargo -> {
+                    if (optionalCargo.isPresent()) {
+                        log.info("Cliente encontrado com sucesso para ID: {}", id);
+                        return Mono.just(optionalCargo.get());
+                    } else {
+                        log.warn("Nenhum cargo Cliente para o ID: {}", id);
+                        return Mono.empty();
+                    }
+                })
+                .doOnError(e -> log.error("Erro ao buscar Cliente por ID {}: {}", id, e.getMessage(), e));
     }
 }

@@ -71,6 +71,11 @@ public class Turma {
     @Column(nullable = false)
     LocalDateTime dataAtualizacao; // Data e hora da última atualização do registro
 
+    @OneToMany(mappedBy = "turma", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    Set<Matricula> matriculas;
+
+
     // Métodos de callback JPA para gerenciar datas de criação e atualização
     @PrePersist
     protected void onCreate() {

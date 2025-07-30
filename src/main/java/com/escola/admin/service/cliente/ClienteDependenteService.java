@@ -2,19 +2,20 @@ package com.escola.admin.service.cliente;
 
 import com.escola.admin.model.entity.cliente.ClienteDependente;
 import com.escola.admin.model.request.cliente.ClienteDependenteRequest;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface ClienteDependenteService {
 
-    ClienteDependente save(ClienteDependenteRequest request);
+    Mono<ClienteDependente> save(ClienteDependenteRequest request);
 
-    Optional<Boolean> apagar(Integer id);
+    Optional<Boolean> apagar(Long id);
 
-    Optional<ClienteDependente> findById(Integer id);
+    Mono<ClienteDependente> findById(Long id);
 
-    Optional<List<ClienteDependente>> findAllByClienteId(Integer id);
+    Optional<List<ClienteDependente>> findAllByClienteId(Long id);
 
 
 }

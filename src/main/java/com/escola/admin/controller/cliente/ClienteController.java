@@ -22,7 +22,6 @@ import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.Optional;
 
 @Controller
 @RequiredArgsConstructor
@@ -106,7 +105,7 @@ public class ClienteController {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public Optional<ClienteResponse> fetchByIdCliente(@Argument Integer id) {
+    public Mono<ClienteResponse> fetchByIdCliente(@Argument Long id) {
         return clienteService.findById(id).map(clienteMapper::toResponse);
     }
 

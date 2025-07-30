@@ -10,7 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-public interface ClienteRepository extends CrudRepository<Cliente, Integer> {
+public interface ClienteRepository extends CrudRepository<Cliente, Long> {
 
     @Query("SELECT e FROM Cliente e " +
             " WHERE e.empresa.id = :idEmpresa " +

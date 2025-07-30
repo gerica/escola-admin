@@ -3,8 +3,8 @@ package com.escola.admin.model.request.cliente;
 import com.escola.admin.model.entity.cliente.TipoContato;
 
 public record ClienteContatoRequest(
-        Integer id,
-        Integer idCliente,
+        Long id,
+        Long idCliente,
         String numero,
         TipoContato tipoContato,
         String observacao

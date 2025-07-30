@@ -1,5 +1,6 @@
 package com.escola.admin.controller.cliente;
 
+import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.mapper.cliente.ClienteDependenteMapper;
 import com.escola.admin.model.request.cliente.ClienteDependenteRequest;
 import com.escola.admin.model.response.cliente.ClienteDependenteResponse;
@@ -12,6 +13,7 @@ import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,28 +28,30 @@ public class ClienteDependenteController {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public Optional<ClienteDependenteResponse> fetchDependenteById(@Argument Integer id) {
+    public Mono<ClienteDependenteResponse> fetchDependenteById(@Argument Long id) {
         return service.findById(id).map(mapper::toResponse);
     }
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public Optional<List<ClienteDependenteResponse>> fetchDependenteByIdCliente(@Argument Integer id) {
+    public Optional<List<ClienteDependenteResponse>> fetchDependenteByIdCliente(@Argument Long id) {
         return service.findAllByClienteId(id).map(mapper::toResponseList);
     }
 
     @MutationMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
-    public boolean deleteDependenteById(@Argument Integer id) {
+    public boolean deleteDependenteById(@Argument Long id) {
         var entity = service.apagar(id);
         return entity.orElse(false);
     }
 
     @MutationMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
-    public ClienteDependenteResponse saveClienteDependente(@Argument ClienteDependenteRequest request) {
-        var entity = service.save(request);
-        return mapper.toResponse(entity);
+    public Mono<ClienteDependenteResponse> saveClienteDependente(@Argument ClienteDependenteRequest request) {
+        return service.save(request)
+                .map(mapper::toResponse)
+                .switchIfEmpty(Mono.error(new BaseException("Não foi possível salvar turma. O serviço retornou um resultado vazio.")))
+                .onErrorResume(BaseException.class, Mono::error);
     }
 
 }

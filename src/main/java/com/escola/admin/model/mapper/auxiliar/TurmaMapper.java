@@ -22,6 +22,7 @@ public interface TurmaMapper {
     @Mapping(target = "dataAtualizacao", ignore = true)
     @Mapping(target = "empresa", ignore = true)
     @Mapping(target = "curso", ignore = true)
+    @Mapping(target = "matriculas", ignore = true)
     Turma toEntity(TurmaRequest request);
 
     @Mapping(target = "id", ignore = true)
@@ -29,6 +30,7 @@ public interface TurmaMapper {
     @Mapping(target = "dataAtualizacao", ignore = true)
     @Mapping(target = "empresa", ignore = true)
     @Mapping(target = "curso", ignore = true)
+    @Mapping(target = "matriculas", ignore = true)
     Turma updateEntity(TurmaRequest source, @MappingTarget Turma target);
 
 }

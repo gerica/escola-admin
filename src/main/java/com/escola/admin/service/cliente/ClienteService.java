@@ -4,6 +4,7 @@ import com.escola.admin.model.entity.cliente.Cliente;
 import com.escola.admin.model.request.cliente.ClienteRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import reactor.core.publisher.Mono;
 
 import java.util.Optional;
 
@@ -12,7 +13,7 @@ public interface ClienteService {
 
     Optional<Page<Cliente>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable);
 
-    Optional<Cliente> findById(Integer id);
+    Mono<Cliente> findById(Long id);
 
     Optional<Page<Cliente>> findAtivosByFiltro(String filtro, Long empresaIdFromToken, Pageable pageable);
 

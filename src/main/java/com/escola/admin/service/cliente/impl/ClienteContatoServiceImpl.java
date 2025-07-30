@@ -38,36 +38,36 @@ public class ClienteContatoServiceImpl implements ClienteContatoService {
                             return existingEntity;
                         }
                 )
-                .switchIfEmpty(Mono.defer(() -> {
-                    ClienteContato newEntity = mapper.toEntity(request);
-                    return Mono.fromCallable(() -> clienteService.findById(request.idCliente()))
-                            .flatMap(Mono::justOrEmpty)
-                            .switchIfEmpty(Mono.error(new BaseException("Cliente com o ID " + request.idCliente() + " não encontrado.")))
-                            .map(cliente -> {
-                                newEntity.setCliente(cliente);
-                                return newEntity;
-                            })
-                            .switchIfEmpty(Mono.just(newEntity));
-                }));
+                .switchIfEmpty( // Se não encontrou pelo ID, então é um novo ClienteContato
+                        Mono.defer(() -> {
+                            ClienteContato newEntity = mapper.toEntity(request);
+                            return clienteService.findById(request.idCliente()) // Assume que findById retorna Mono<Cliente>
+                                    .switchIfEmpty(Mono.error(new BaseException("Cliente com o ID " + request.idCliente() + " não encontrado.")))
+                                    .map(cliente -> {
+                                        newEntity.setCliente(cliente);
+                                        return newEntity;
+                                    });
+                        })
+                );
 
-        return entityMono.flatMap(uwp -> Mono.fromCallable(() -> repository.save(uwp)))
+        return entityMono.flatMap(clienteContatoToSave -> Mono.fromCallable(() -> repository.save(clienteContatoToSave))) // Salva a entidade
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
                 .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException);
     }
 
     @Override
-    public Optional<Boolean> apagar(Integer id) {
+    public Optional<Boolean> apagar(Long id) {
         repository.deleteById(id);
         return Optional.of(true);
     }
 
     @Override
-    public Optional<ClienteContato> findById(Integer id) {
+    public Optional<ClienteContato> findById(Long id) {
         return repository.findById(id);
     }
 
     @Override
-    public Optional<List<ClienteContato>> findAllByClienteId(Integer id) {
+    public Optional<List<ClienteContato>> findAllByClienteId(Long id) {
         return repository.findAllByClienteId(id);
     }
 

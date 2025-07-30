@@ -8,9 +8,9 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-public interface ClienteContatoRepository extends CrudRepository<ClienteContato, Integer> {
+public interface ClienteContatoRepository extends CrudRepository<ClienteContato, Long> {
 
     @Query("SELECT e FROM ClienteContato e " +
             " WHERE e.cliente.id = :id")
-    Optional<List<ClienteContato>> findAllByClienteId(@Param("id") Integer id);
+    Optional<List<ClienteContato>> findAllByClienteId(@Param("id") Long id);
 }

@@ -12,11 +12,11 @@ public interface ClienteContatoService {
 
     Mono<ClienteContato> save(ClienteContatoRequest request);
 
-    Optional<Boolean> apagar(Integer id);
+    Optional<Boolean> apagar(Long id);
 
-    Optional<ClienteContato> findById(Integer id);
+    Optional<ClienteContato> findById(Long id);
 
-    Optional<List<ClienteContato>> findAllByClienteId(Integer id);
+    Optional<List<ClienteContato>> findAllByClienteId(Long id);
 
 
 }

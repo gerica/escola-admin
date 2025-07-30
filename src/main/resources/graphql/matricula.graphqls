@@ -1,0 +1,55 @@
+# Define o tipo de entrada para criar ou atualizar um Matricula
+input MatriculaRequest {
+    id: ID
+    idTurma: ID!
+    idCliente: ID
+    idClienteDependente: ID
+    status: StatusMatricula
+    observacoes: String
+}
+
+# Define o tipo Matricula que será retornado pelas queries
+type MatriculaResponse {
+    id: ID!
+    turma:TurmaResponse
+    cliente:ClienteResponse
+    clienteDependente:ClienteDependenteResponse
+    status:StatusMatricula
+    observacoes:String
+    dataCadastro: String
+    dataAtualizacao:String
+}
+
+# Define a estrutura de uma página de Matriculas
+type MatriculaResponsePage {
+    content: [MatriculaResponse!]!
+    totalPages: Int!
+    totalElements: Long!
+    number: Int! # Número da página atual
+    size: Int! # Tamanho da página
+    first: Boolean!
+    last: Boolean!
+    empty: Boolean!
+}
+
+
+extend type Query {
+    # Busca um cargo pelo seu ID
+    fetchByIdMatricula(id: ID!): MatriculaResponse
+
+    # Busca uma lista paginada de cargos, com filtro opcional
+    fetchAllMatriculas(
+        idTurma: ID!
+        page: Int! = 0 # Valor padrão para a página
+        size: Int! = 10 # Valor padrão para o tamanho da página
+        sort: [SortRequest] # Lista de critérios de ordenação
+    ): MatriculaResponsePage!
+}
+
+extend type Mutation {
+    # Salva (cria ou atualiza) um cargo
+    saveMatricula(request: MatriculaRequest!): MatriculaResponse!
+
+    # Exclui um pelo seu ID
+    deleteMatriculaById(id: ID!): String
+}

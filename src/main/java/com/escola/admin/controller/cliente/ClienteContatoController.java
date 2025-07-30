@@ -28,19 +28,19 @@ public class ClienteContatoController {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public Optional<ClienteContatoResponse> fetchContatoById(@Argument Integer id) {
+    public Optional<ClienteContatoResponse> fetchContatoById(@Argument Long id) {
         return service.findById(id).map(mapper::toResponse);
     }
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public Optional<List<ClienteContatoResponse>> fetchContatoByIdCliente(@Argument Integer id) {
+    public Optional<List<ClienteContatoResponse>> fetchContatoByIdCliente(@Argument Long id) {
         return service.findAllByClienteId(id).map(mapper::toResponseList);
     }
 
     @MutationMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
-    public boolean deleteContatoById(@Argument Integer id) {
+    public boolean deleteContatoById(@Argument Long id) {
         var entity = service.apagar(id);
         return entity.orElse(false);
     }

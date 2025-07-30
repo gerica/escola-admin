@@ -64,17 +64,18 @@ public class AuxiliarInitializer {
      */
     private void cargaTurmas(Optional<Empresa> empresaParaVinculo) {
         log.info("Iniciando carga de Turmas...");
-        Optional<Page<Turma>> byFiltro = turmaService.findByFiltro("", pageableHelp.getPageable(0, 1, new ArrayList<>()));
-        if (byFiltro.isPresent() && !byFiltro.get().getContent().isEmpty()) {
-            log.info("Turmas já cadastradas...");
-            return;
-        }
 
         if (empresaParaVinculo.isEmpty()) {
             log.warn("Carga de turmas pulada: Nenhuma empresa de referência encontrada.");
             return;
         }
         Empresa empresa = empresaParaVinculo.get();
+
+        Optional<Page<Turma>> byFiltro = turmaService.findByFiltro("", empresa.getId(), pageableHelp.getPageable(0, 1, new ArrayList<>()));
+        if (byFiltro.isPresent() && !byFiltro.get().getContent().isEmpty()) {
+            log.info("Turmas já cadastradas...");
+            return;
+        }
 
         List<Curso> cursosExistentes = getExistingCursos(empresa.getId());
         if (cursosExistentes.size() < 5) {

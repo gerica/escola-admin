@@ -119,10 +119,10 @@ public class TurmaServiceImpl implements TurmaService {
     }
 
     @Override
-    public Optional<Page<Turma>> findByFiltro(String filtro, Pageable pageable) {
+    public Optional<Page<Turma>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable) {
         log.info("Buscando turmas por filtro '{}' com paginação: {}", filtro, pageable);
         try {
-            Optional<Page<Turma>> result = repository.findByFiltro(filtro, pageable);
+            Optional<Page<Turma>> result = repository.findByFiltro(filtro, idEmpresa, pageable);
             if (result.isPresent()) {
                 log.info("Encontrados {} turmas paginados para o filtro '{}'.", result.get().getTotalElements(), filtro);
             } else {
