@@ -1,13 +1,13 @@
 package com.escola.admin.service.cliente.impl;
 
+import com.escola.admin.model.entity.Parametro;
 import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.mapper.cliente.ContratoMapper;
 import com.escola.admin.model.request.cliente.ContratoRequest;
-import com.escola.admin.model.response.cliente.ParametroResponse;
 import com.escola.admin.repository.cliente.ContratoRepository;
+import com.escola.admin.service.ParametroService;
 import com.escola.admin.service.cliente.ArtificalInteligenceService;
 import com.escola.admin.service.cliente.ContratoService;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -20,8 +20,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import reactor.core.publisher.Mono;
 
 import java.util.Optional;
+
+import static com.escola.admin.service.ParametroService.CHAVE_CONTRATO_MODELO_PADRAO_MAP;
 
 @Service()
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -29,20 +32,11 @@ import java.util.Optional;
 @Slf4j
 public class ContratoServiceImpl implements ContratoService {
 
-
-    final String QUERY = """
-            query findByChave($chave: String!) {
-                findByChave(chave: $chave) {
-                    id
-                    chave
-                    modeloContrato
-                }
-            }
-            """;
     ContratoRepository repository;
     ContratoMapper mapper;
     HttpGraphQlClient graphQlClient;
     ArtificalInteligenceService parseLocal;
+    ParametroService parametroService;
 //    ArtificalInteligenceService chatgpt;
     //    ArtificalInteligenceService gemini;
 
@@ -70,8 +64,20 @@ public class ContratoServiceImpl implements ContratoService {
     }
 
     @Override
-    public Optional<Contrato> findById(Long id) {
-        return repository.findById(id);
+    public Mono<Contrato> findById(Long id) {
+        log.info("Buscando Contato por ID: {}", id);
+        return Mono.fromCallable(() -> repository.findById(id))
+                .flatMap(entity -> {
+                    if (entity.isPresent()) {
+                        log.info("Turma encontrado com sucesso para ID: {}", id);
+                        return Mono.just(entity.get());
+                    } else {
+                        log.warn("Nenhum turma encontrado para o ID: {}", id);
+                        return Mono.empty();
+                    }
+                })
+                .doOnError(e -> log.error("Erro ao buscar contrato por ID {}: {}", id, e.getMessage(), e));
+
     }
 
     @Override
@@ -79,34 +85,58 @@ public class ContratoServiceImpl implements ContratoService {
         return Optional.empty();
     }
 
-    @Override
-    public Optional<Contrato> parseContrato(Long idContrato) {
-        try {
-            ParametroResponse response = graphQlClient.document(QUERY)
-                    .variable("chave", CHAVE_CONTRATO_MODELO_PADRAO)
-                    .retrieve("findByChave")
-                    .toEntity(ParametroResponse.class)
-                    .block();
-            Optional<Contrato> optional = findById(idContrato);
+//    @Override
+//    public Mono<Contrato> parseContrato(Long idContrato) {
+//        try {
+//
+//            Optional<Parametro> response = parametroService.findByChave(CHAVE_CONTRATO_MODELO_PADRAO);
+//            Optional<Contrato> optional = findById(idContrato);
+//
+//            if (optional.isPresent() && response != null) {
+//                converterComIA(optional.get(), response);
+//            }
+//            return optional;
+//        } catch (Exception e) {
+//            log.error("Erro ao chamar o admin-service: {}", e.getMessage());
+//            return Optional.empty();
+//        }
+//    }
 
-            if (optional.isPresent() && response != null) {
-                converterComIA(optional.get(), response);
+
+    @Override
+    public Mono<Contrato> parseContrato(Long idContrato) {
+        return Mono.defer(() -> { // Mono.defer para garantir que a lógica seja executada apenas na subscrição
+            try {
+                Mono<Parametro> parametroMono = parametroService.findByChave(CHAVE_CONTRATO_MODELO_PADRAO);
+                Mono<Contrato> contratoOptionalMono = findById(idContrato);
+
+                return Mono.zip(contratoOptionalMono, parametroMono)
+                        .flatMap(tuple -> {
+                            Contrato contrato = tuple.getT1();
+                            Parametro parametro = tuple.getT2();
+
+                            converterComIA(contrato, parametro);
+                            return Mono.just(contrato); // Retorna o contrato modificado
+
+                        })
+                        .doOnError(e -> log.error("Erro ao chamar o admin-service: {}", e.getMessage())) // Captura erros
+                        .onErrorResume(e -> Mono.empty()); // Em caso de erro, retorna um Mono vazio
+            } catch (Exception e) {
+                log.error("Erro ao chamar o admin-service (inicialização): {}", e.getMessage());
+                return Mono.error(e); // Retorna um Mono com erro para falhas na fase de defer
             }
-            return optional;
-        } catch (Exception e) {
-            log.error("Erro ao chamar o admin-service: {}", e.getMessage());
-            return Optional.empty();
-        }
+        });
     }
 
-    private void converterComIA(Contrato contrato, ParametroResponse response) throws JsonProcessingException {
+    private void converterComIA(Contrato contrato, Parametro parametro) {
 
 
 //        var resultSmartContrato = chatgpt.generateText("Estou passando para você um contrato: " + response.getModeloContrato() +
 //                "E aqui está os dados de um cliente: " + jsonOutput + ", preencha os campos referente ao cliente nesse contrato e " +
 //                "me retorno o contrato, no mesmo formato que te enviei.");
 
-        var resultSmartContrato = parseLocal.generateText(response.getModeloContrato(), contrato);
+        String modelo = (String) parametro.getJsonData().get(CHAVE_CONTRATO_MODELO_PADRAO_MAP);
+        var resultSmartContrato = parseLocal.generateText(modelo, contrato);
 
         contrato.setContratoDoc(resultSmartContrato);
     }

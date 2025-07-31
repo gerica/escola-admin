@@ -1,6 +1,7 @@
 package com.escola.admin.controller;
 
 
+import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.mapper.ParametroMapper;
 import com.escola.admin.model.request.ParametroRequest;
 import com.escola.admin.model.response.ParametroResponse;
@@ -14,6 +15,7 @@ import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+import reactor.core.publisher.Mono;
 
 @Controller
 @Slf4j
@@ -26,24 +28,22 @@ public class ParametroController {
 
     @PreAuthorize("isAuthenticated()")
     @QueryMapping
-    public ParametroResponse findByChave(@Argument String chave) {
+    public Mono<ParametroResponse> findByChave(@Argument String chave) {
         log.info("Executando findByChave com a chave: {}", chave);
         var optParametro = service.findByChave(chave);
-        ParametroResponse response = optParametro
-                .map(mapper::toResponse)
-                .orElse(null);
-        log.info("Admin-service retornando para chave {}: {}", chave, response); // <-- Adicione este log
-        return response;
+        log.info("Admin-service retornando para chave {}: {}", chave, optParametro); // <-- Adicione este log
+        return optParametro.map(mapper::toResponse);
 
     }
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
-    public ParametroResponse salvarParametro(@Argument ParametroRequest request) {
+    public Mono<ParametroResponse> salvarParametro(@Argument ParametroRequest request) {
         log.info("Executando salvarParametro salvar: {}", request);
-        var entity = service.salvar(request);
-        return entity
+        return service.salvar(request)
                 .map(mapper::toResponse) // Se o Optional contiver um valor, aplica o mapper
-                .orElse(null);
+                .switchIfEmpty(Mono.error(new BaseException("Não foi possível salvar parâmetro. O serviço retornou um resultado vazio.")))
+                .onErrorResume(BaseException.class, Mono::error);
+
     }
 }

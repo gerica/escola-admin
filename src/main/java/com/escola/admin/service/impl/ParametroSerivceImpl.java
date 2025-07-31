@@ -10,9 +10,9 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.util.Map;
-import java.util.Optional;
 
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -22,33 +22,36 @@ public class ParametroSerivceImpl implements ParametroService {
     ParametroRepository repository;
     ObjectMapper objectMapper; // O Spring Boot fornece um bean pré-configurado
 
-
     @Override
-    public Optional<Parametro> salvar(ParametroRequest request) {
+    public Mono<Parametro> salvar(ParametroRequest request) {
         // 1. Converte o objeto de request inteiro em um Map.
-        //    O Jackson usará os nomes dos campos como chaves do mapa.
-        //    Graças à configuração 'non_null', campos nulos no request serão ignorados.
         Map<String, Object> dados = objectMapper.convertValue(request, new TypeReference<>() {
         });
 
         // 2. A chave "chave" não deve fazer parte do JSON, então a removemos do mapa.
         dados.remove("chave");
 
-        // 3. Busca um parâmetro existente ou cria um novo.
-        //    Isso evita criar duplicatas e permite a atualização.
-        Parametro parametro = this.findByChave(request.getChave())
-                .orElse(new Parametro()); // Se não existir, cria uma nova instância
+        // 3. Busca um parâmetro existente ou cria um novo de forma reativa.
+        //    Usamos flatMap para trabalhar com o resultado do Mono<Parametro>
+        return this.findByChave(request.getChave())
+                .defaultIfEmpty(new Parametro()) // Se o Mono for vazio (parâmetro não encontrado), emite um novo Parametro
+                .flatMap(parametro -> {
+                    // Agora 'parametro' nunca será nulo aqui.
+                    // Atualiza os dados da entidade
+                    parametro.setChave(request.getChave());
+                    parametro.setJsonData(dados);
 
-        // 4. Atualiza os dados da entidade
-        parametro.setChave(request.getChave());
-        parametro.setJsonData(dados);
-
-        return Optional.of(repository.save(parametro));
+                    // O repository.save() provavelmente retorna um Parametro salvo
+                    // Se o seu repository.save() retorna um Mono<Parametro>, use-o diretamente.
+                    // Se retorna Parametro, você precisa envolvê-lo em Mono.just().
+                    // Assumindo que o repository.save() retorna o Parametro salvo.
+                    return Mono.just(repository.save(parametro));
+                });
     }
 
     @Override
-    public Optional<Parametro> findByChave(String chave) {
-        return repository.findByChave(chave);
+    public Mono<Parametro> findByChave(String chave) {
+        return Mono.justOrEmpty(repository.findByChave(chave));
     }
 
 }

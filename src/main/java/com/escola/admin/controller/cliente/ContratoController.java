@@ -2,8 +2,8 @@ package com.escola.admin.controller.cliente;
 
 import com.escola.admin.controller.help.PageableHelp;
 import com.escola.admin.controller.help.SortInput;
+import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Usuario;
-import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.mapper.cliente.ContratoMapper;
 import com.escola.admin.model.request.cliente.ContratoRequest;
 import com.escola.admin.model.response.cliente.ContratoResponse;
@@ -11,6 +11,7 @@ import com.escola.admin.service.cliente.ContratoService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -22,12 +23,11 @@ import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
 
 @Controller
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@Slf4j
 public class ContratoController {
 
     public static final String SUCESSO = "Sucesso";
@@ -68,7 +68,7 @@ public class ContratoController {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public Optional<ContratoResponse> fetchByIdContrato(@Argument Long id) {
+    public Mono<ContratoResponse> fetchByIdContrato(@Argument Long id) {
         return contratoService.findById(id).map(contratoMapper::toResponse);
     }
 
@@ -81,10 +81,16 @@ public class ContratoController {
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
-    public ContratoResponse parseContrato(@Argument Long id) {
+    public Mono<ContratoResponse> parseContrato(@Argument Long id) {
+        log.info("Executando parse contrato com o id: {}", id);
         return contratoService.parseContrato(id)
-                .map(contratoMapper::toResponse)
-                .orElseThrow(() -> new NoSuchElementException("Contrato com ID " + id + " não encontrado."));
+                .map(contratoMapper::toResponse) // Se o Optional contiver um valor, aplica o mapper
+                .switchIfEmpty(Mono.error(new BaseException("Não foi fazer o parse do contrato. O serviço retornou um resultado vazio.")))
+                .onErrorResume(BaseException.class, Mono::error);
+//        return contratoService.parseContrato(id).map(contratoMapper::toResponse);
+//        return contratoService.parseContrato(id)
+//                .map(contratoMapper::toResponse)
+//                .orElseThrow(() -> new NoSuchElementException("Contrato com ID " + id + " não encontrado."));
         // Ou uma exceção mais específica, com
     }
 
