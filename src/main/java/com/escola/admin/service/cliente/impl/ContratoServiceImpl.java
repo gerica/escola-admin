@@ -1,26 +1,30 @@
 package com.escola.admin.service.cliente.impl;
 
+import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Parametro;
+import com.escola.admin.model.entity.auxiliar.Matricula;
+import com.escola.admin.model.entity.auxiliar.Turma;
+import com.escola.admin.model.entity.cliente.Cliente;
 import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.mapper.cliente.ContratoMapper;
 import com.escola.admin.model.request.cliente.ContratoRequest;
 import com.escola.admin.repository.cliente.ContratoRepository;
 import com.escola.admin.service.ParametroService;
+import com.escola.admin.service.auxiliar.TurmaService;
 import com.escola.admin.service.cliente.ArtificalInteligenceService;
+import com.escola.admin.service.cliente.ClienteService;
 import com.escola.admin.service.cliente.ContratoService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.graphql.client.HttpGraphQlClient;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.Optional;
 
@@ -33,6 +37,8 @@ import static com.escola.admin.service.ParametroService.CHAVE_CONTRATO_MODELO_PA
 public class ContratoServiceImpl implements ContratoService {
 
     ContratoRepository repository;
+    TurmaService turmaService;
+    ClienteService clienteService;
     ContratoMapper mapper;
     HttpGraphQlClient graphQlClient;
     ArtificalInteligenceService parseLocal;
@@ -41,21 +47,29 @@ public class ContratoServiceImpl implements ContratoService {
     //    ArtificalInteligenceService gemini;
 
     @Override
-    public Contrato save(ContratoRequest request) {
-        Contrato entity;
-        Optional<Contrato> optional = Optional.empty();
-        if (request.idContrato() != null) {
-            optional = repository.findById(request.idContrato());
-        }
-
-        if (optional.isPresent()) {
-            entity = mapper.updateEntity(request, optional.get());
-        } else {
-            entity = mapper.toEntity(request);
-//            entity.setdata(LocalDateTime.now());
-        }
-//        entity.setDataAtualizacao(LocalDateTime.now());
-        return repository.save(entity);
+    public Mono<Void> save(ContratoRequest request) {
+//        Contrato entity;
+//        Optional<Contrato> optional = Optional.empty();
+//        if (request.idContrato() != null) {
+//            optional = repository.findById(request.idContrato());
+//        }
+//
+//        if (optional.isPresent()) {
+//            entity = mapper.updateEntity(request, optional.get());
+//        } else {
+//            entity = mapper.toEntity(request);
+//        }
+//
+//        return repository.save(entity);
+        return validateRequest(request) // Step 1: Validate the incoming request
+                .then(getRequiredEntities(request)) // Step 2: Fetch all necessary entities concurrently
+                .flatMap(context -> findOrCreate(request, context.turma, context.cliente)) // Step 3: Find or create the Matricula entity
+                .flatMap(this::persistMatricula) // Step 4: Persist the Matricula
+                .doOnSuccess(savedMatricula -> log.info("Matrícula salva com sucesso. ID: {}", savedMatricula.getId()))
+                .doOnError(e -> log.error("Falha na operação de salvar matrícula: {}", e.getMessage(), e))
+                .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
+                .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException)
+                .then();
     }
 
     @Override
@@ -84,24 +98,6 @@ public class ContratoServiceImpl implements ContratoService {
     public Optional<Void> deleteById(Integer id) {
         return Optional.empty();
     }
-
-//    @Override
-//    public Mono<Contrato> parseContrato(Long idContrato) {
-//        try {
-//
-//            Optional<Parametro> response = parametroService.findByChave(CHAVE_CONTRATO_MODELO_PADRAO);
-//            Optional<Contrato> optional = findById(idContrato);
-//
-//            if (optional.isPresent() && response != null) {
-//                converterComIA(optional.get(), response);
-//            }
-//            return optional;
-//        } catch (Exception e) {
-//            log.error("Erro ao chamar o admin-service: {}", e.getMessage());
-//            return Optional.empty();
-//        }
-//    }
-
 
     @Override
     public Mono<Contrato> parseContrato(Long idContrato) {
@@ -141,13 +137,78 @@ public class ContratoServiceImpl implements ContratoService {
         contrato.setContratoDoc(resultSmartContrato);
     }
 
-
-    private String getCurrentRequestToken() {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes instanceof ServletRequestAttributes attributes) {
-            return attributes.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
+    private Mono<Void> validateRequest(ContratoRequest request) {
+        if (request.idMatricula() == null) {
+            return Mono.error(new BaseException("O ID da matricula é obrigatório."));
         }
-        return null;
+        return Mono.empty(); // Indicate success
     }
+
+    private Mono<EntitiesContext> getRequiredEntities(ContratoRequest request) {
+        Mono<Turma> monoTurma = turmaService.findById(request.idTurma())
+                .switchIfEmpty(Mono.error(new BaseException("Turma não encontrada com o ID: " + request.idTurma())));
+
+        Mono<Cliente> monoCliente = clienteService.findById(request.idCliente())
+                .switchIfEmpty(Mono.error(new BaseException("Cliente não encontrado com o ID: " + request.idCliente())));
+
+//        Mono.zip() combina os resultados de múltiplos Monos em uma única tupla,
+//        permitindo que operações assíncronas independentes sejam executadas e
+//        seus resultados combinados de forma reativa e paralela.
+        return Mono.zip(monoTurma, monoCliente)
+                .flatMap(tuple -> {
+                    Turma turma = tuple.getT1();
+                    Cliente cliente = tuple.getT2();
+                    return Mono.just(new EntitiesContext(turma, cliente));
+                });
+    }
+
+    private Mono<Matricula> findOrCreate(ContratoRequest request, Turma turma, Cliente cliente) {
+        return Mono.justOrEmpty(request.id())
+                .flatMap(id -> Mono.fromCallable(() -> repository.findById(id))
+                        .flatMap(Mono::justOrEmpty)
+                        .switchIfEmpty(Mono.error(new BaseException("Contrato com ID " + id + " não encontrada para atualização.")))
+                )
+                .map(existingEntity -> {
+                    log.info("Atualizando contrato existente com ID: {}", existingEntity.getIdContrato());
+                    mapper.updateEntity(request, existingEntity);
+                    return existingEntity;
+                })
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.info("Criando nova entidade de contrato para a turma '{}'", turma.getNome());
+                    Contrato novaMatricula = mapper.toEntity(request);
+                    novaMatricula.setTurma(turma);
+                    novaMatricula.setCliente(cliente);
+
+                    return Mono.fromCallable(() -> {
+                                // 1. Busca a última matrícula para esta turma (bloqueante)
+                                Optional<Matricula> lastMatriculaOpt = repository.findTopByTurmaIdOrderByCodigoDesc(turma.getId());
+                                int nextSequenceNum = 1; // Começa em 1 se não houver matrículas anteriores
+
+                                if (lastMatriculaOpt.isPresent()) {
+                                    String lastCodigo = lastMatriculaOpt.get().getCodigo();
+                                    // 2. Extrai o número do último código
+                                    try {
+                                        // Pega a parte após o último hífen, que deve ser o número
+                                        String numPart = lastCodigo.substring(lastCodigo.lastIndexOf('-') + 1);
+                                        nextSequenceNum = Integer.parseInt(numPart) + 1;
+                                    } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+                                        log.warn("Formato de código de matrícula inesperado para incremento: {}. Reiniciando a sequência para 1.", lastCodigo);
+                                        // Em caso de erro de formato, reinicia a sequência para garantir
+                                        nextSequenceNum = 1;
+                                    }
+                                }
+
+                                // 3. Formata o novo código (ex: MUS-B-24-001)
+                                String newCodigo = String.format("%s-%03d", turma.getCodigo(), nextSequenceNum);
+                                novaMatricula.setCodigo(newCodigo);
+                                return novaMatricula;
+                            })
+                            .subscribeOn(Schedulers.boundedElastic());// Executa a operação de busca no banco em um pool de threads separado
+                }));
+    }
+
+    private record EntitiesContext(Turma turma, Cliente cliente) {
+    }
+
 
 }

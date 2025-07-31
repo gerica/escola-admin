@@ -1,9 +1,12 @@
 package com.escola.admin.model.entity.cliente;
 
 import com.escola.admin.model.entity.Empresa;
+import com.escola.admin.model.entity.auxiliar.Turma;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -68,5 +71,30 @@ public class Contrato {
     @JoinColumn(name = "empresa_id", nullable = false)
     @ToString.Exclude
     Empresa empresa;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "turma_id", nullable = false)
+    @ToString.Exclude
+    Turma turma;
+
+    @CreationTimestamp // Preenche automaticamente com a data e hora de criação
+    @Column(name = "data_cadastro", nullable = false, updatable = false)
+    LocalDateTime dataCadastro;
+
+    @UpdateTimestamp // Preenche automaticamente com a data e hora da última atualização
+    @Column(name = "data_atualizacao", nullable = false)
+    LocalDateTime dataAtualizacao;
+
+    // Métodos de callback JPA para gerenciar datas de criação e atualização
+    @PrePersist
+    protected void onCreate() {
+        dataCadastro = LocalDateTime.now();
+        dataAtualizacao = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        dataAtualizacao = LocalDateTime.now();
+    }
 
 }

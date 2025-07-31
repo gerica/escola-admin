@@ -94,4 +94,16 @@ public class Cliente {
     @JoinColumn(name = "empresa_id", nullable = false)
     @ToString.Exclude
     Empresa empresa;
+
+    // Métodos de callback JPA para gerenciar datas de criação e atualização
+    @PrePersist
+    protected void onCreate() {
+        dataCadastro = LocalDateTime.now();
+        dataAtualizacao = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        dataAtualizacao = LocalDateTime.now();
+    }
 }

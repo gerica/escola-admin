@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface ContratoService {
     String CHAVE_CONTRATO_MODELO_PADRAO = "CHAVE_CONTRATO_MODELO_PADRAO";
 
-    Contrato save(ContratoRequest request);
+    Mono<Void> save(ContratoRequest request);
 
     Optional<Page<Contrato>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable);
 
