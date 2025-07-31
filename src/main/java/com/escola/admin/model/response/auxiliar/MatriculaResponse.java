@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 public record MatriculaResponse(
         Long id,
+        String codigo,
         TurmaResponse turma,
         ClienteResponse cliente,
         ClienteDependenteResponse clienteDependente,

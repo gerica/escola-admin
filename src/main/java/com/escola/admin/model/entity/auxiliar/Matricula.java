@@ -34,6 +34,9 @@ public class Matricula {
     @ToString.Exclude
     Turma turma; // A qual turma o aluno está matriculado
 
+    @Column(nullable = false, unique = true) // (Opcional, mas útil para identificação interna, ex: "BLTINIA")
+    String codigo;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cliente_id", nullable = true) // Pode ser nulo se for um dependente
     @ToString.Exclude

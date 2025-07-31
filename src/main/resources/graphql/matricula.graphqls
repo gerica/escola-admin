@@ -11,6 +11,7 @@ input MatriculaRequest {
 # Define o tipo Matricula que será retornado pelas queries
 type MatriculaResponse {
     id: ID!
+    codigo: String
     turma:TurmaResponse
     cliente:ClienteResponse
     clienteDependente:ClienteDependenteResponse

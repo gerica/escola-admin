@@ -73,47 +73,50 @@ public class MatriculaServiceImpl implements MatriculaService {
         Mono<Turma> monoTurma = turmaService.findById(request.idTurma())
                 .switchIfEmpty(Mono.error(new BaseException("Turma não encontrada com o ID: " + request.idTurma())));
 
-        Mono<Cliente> monoCliente;
-        Mono<ClienteDependente> monoDependente;
+        // O Mono que conterá o Cliente OU o ClienteDependente, mas não ambos
+        Mono<Object> monoClienteOuDependente; // Usamos Object temporariamente para Mono.zip
 
         if (request.idCliente() != null) {
-            monoCliente = clienteService.findById(request.idCliente())
-                    .switchIfEmpty(Mono.error(new BaseException("Cliente não encontrado com o ID: " + request.idCliente())));
-            monoDependente = Mono.just(null); // Explicitly null if client is chosen
+            log.debug("Buscando Cliente pelo ID: {}", request.idCliente());
+            monoClienteOuDependente = clienteService.findById(request.idCliente())
+                    .switchIfEmpty(Mono.error(new BaseException("Cliente não encontrado com o ID: " + request.idCliente())))
+                    .cast(Object.class); // Converte para Object para que Mono.zip possa lidar com tipos heterogêneos
         } else if (request.idClienteDependente() != null) {
-            monoCliente = Mono.just(null); // Explicitly null if dependent is chosen
-            monoDependente = clienteDependenteService.findById(request.idClienteDependente())
-                    .switchIfEmpty(Mono.error(new BaseException("Cliente Dependente não encontrado com o ID: " + request.idClienteDependente())));
+            log.debug("Buscando ClienteDependente pelo ID: {}", request.idClienteDependente());
+            monoClienteOuDependente = clienteDependenteService.findById(request.idClienteDependente())
+                    .switchIfEmpty(Mono.error(new BaseException("Cliente Dependente não encontrado com o ID: " + request.idClienteDependente())))
+                    .cast(Object.class); // Converte para Object
         } else {
-            monoCliente = Mono.just(null);
-            monoDependente = Mono.just(null);
+            // Este caso já deveria ter sido pego por validateMatriculaRequest, mas é uma segurança.
+            return Mono.error(new BaseException("É obrigatório associar a matrícula a um Cliente ou a um Cliente Dependente."));
         }
 
-        // Zip all three Monos. Since monoCliente and monoDependente are guaranteed to emit
-        // either an entity or an explicit null, there's no need for .defaultIfEmpty(null)
-        // on the zipped streams.
-        return Mono.zip(monoTurma, monoCliente, monoDependente)
+        return Mono.zip(monoTurma, monoClienteOuDependente) // Zipando apenas 2 Monos agora
                 .flatMap(tuple -> {
                     Turma turma = tuple.getT1();
-                    Cliente cliente = tuple.getT2();
-                    ClienteDependente dependente = tuple.getT3();
+                    Object clienteOuDependente = tuple.getT2(); // Pode ser Cliente ou ClienteDependente
 
-                    log.info("Entidades encontradas: Turma ID {} | Cliente ID {} | Dependente ID {}",
-                            turma.getId(),
-                            Optional.ofNullable(cliente).map(Cliente::getId).orElse(null),
-                            Optional.ofNullable(dependente).map(ClienteDependente::getId).orElse(null)
-                    );
+                    Cliente cliente = null;
+                    ClienteDependente dependente = null;
 
-                    // A final sanity check, though validateMatriculaRequest handles mutual exclusivity
-                    if (request.idCliente() == null && request.idClienteDependente() == null) {
-                        return Mono.error(new BaseException("É obrigatório associar a matrícula a um Cliente ou a um Cliente Dependente."));
+                    if (clienteOuDependente instanceof Cliente) {
+                        cliente = (Cliente) clienteOuDependente;
+                        log.info("Entidades encontradas: Turma ID {} | Cliente ID {} | Dependente ID {}",
+                                turma.getId(), cliente.getId(), "N/A (cliente principal)");
+                    } else if (clienteOuDependente instanceof ClienteDependente) {
+                        dependente = (ClienteDependente) clienteOuDependente;
+                        log.info("Entidades encontradas: Turma ID {} | Cliente ID {} | Dependente ID {}",
+                                turma.getId(), "N/A (dependente)", dependente.getId());
+                    } else {
+                        // Este é um caso de erro grave, pois clienteOuDependente deveria ser um dos tipos
+                        log.error("CRITICAL ERROR: Tipo inesperado encontrado após zip: {}", clienteOuDependente.getClass().getName());
+                        return Mono.error(new BaseException("Erro interno ao processar tipo de cliente/dependente."));
                     }
 
-                    // If all is well, wrap the EntitiesContext in a Mono.just()
+                    // Cria o contexto com um dos valores nulo, conforme a lógica de negócio
                     return Mono.just(new EntitiesContext(turma, cliente, dependente));
                 });
     }
-
 
     /**
      * Método auxiliar para encapsular a lógica de criação ou atualização da entidade Matricula.
@@ -141,7 +144,32 @@ public class MatriculaServiceImpl implements MatriculaService {
                     novaMatricula.setTurma(turma);
                     novaMatricula.setCliente(cliente);
                     novaMatricula.setClienteDependente(dependente);
-                    return Mono.just(novaMatricula);
+
+                    return Mono.fromCallable(() -> {
+                                // 1. Busca a última matrícula para esta turma (bloqueante)
+                                Optional<Matricula> lastMatriculaOpt = repository.findTopByTurmaIdOrderByCodigoDesc(turma.getId());
+                                int nextSequenceNum = 1; // Começa em 1 se não houver matrículas anteriores
+
+                                if (lastMatriculaOpt.isPresent()) {
+                                    String lastCodigo = lastMatriculaOpt.get().getCodigo();
+                                    // 2. Extrai o número do último código
+                                    try {
+                                        // Pega a parte após o último hífen, que deve ser o número
+                                        String numPart = lastCodigo.substring(lastCodigo.lastIndexOf('-') + 1);
+                                        nextSequenceNum = Integer.parseInt(numPart) + 1;
+                                    } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+                                        log.warn("Formato de código de matrícula inesperado para incremento: {}. Reiniciando a sequência para 1.", lastCodigo);
+                                        // Em caso de erro de formato, reinicia a sequência para garantir
+                                        nextSequenceNum = 1;
+                                    }
+                                }
+
+                                // 3. Formata o novo código (ex: MUS-B-24-001)
+                                String newCodigo = String.format("%s-%03d", turma.getCodigo(), nextSequenceNum);
+                                novaMatricula.setCodigo(newCodigo);
+                                return novaMatricula;
+                            })
+                            .subscribeOn(Schedulers.boundedElastic());// Executa a operação de busca no banco em um pool de threads separado
                 }));
     }
 
