@@ -41,9 +41,9 @@ public class MatriculaController {
      */
     @MutationMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
-    public Mono<MatriculaResponse> saveMatricula(@Argument MatriculaRequest request) {
+    public Mono<String> saveMatricula(@Argument MatriculaRequest request) {
         return matriculaService.save(request)
-                .map(matriculaMapper::toResponse)
+                .then(Mono.just("Operação realizada com sucesso."))
                 .switchIfEmpty(Mono.error(new BaseException("Não foi possível salvar turma. O serviço retornou um resultado vazio.")))
                 .onErrorResume(BaseException.class, Mono::error);
     }

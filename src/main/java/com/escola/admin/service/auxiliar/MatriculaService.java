@@ -10,7 +10,7 @@ import java.util.Optional;
 
 public interface MatriculaService {
 
-    Mono<Matricula> save(MatriculaRequest request);
+    Mono<Void> save(MatriculaRequest request);
 
     Mono<Matricula> findById(Long id);
 

@@ -27,6 +27,7 @@ public interface MatriculaMapper {
     @Mapping(target = "turma", ignore = true)
     @Mapping(target = "cliente", ignore = true)
     @Mapping(target = "clienteDependente", ignore = true)
+    @Mapping(target = "codigo", ignore = true)
     Matricula toEntity(MatriculaRequest request);
 
     @Mapping(target = "id", ignore = true)
@@ -35,6 +36,7 @@ public interface MatriculaMapper {
     @Mapping(target = "turma", ignore = true)
     @Mapping(target = "cliente", ignore = true)
     @Mapping(target = "clienteDependente", ignore = true)
+    @Mapping(target = "codigo", ignore = true)
     Matricula updateEntity(MatriculaRequest source, @MappingTarget Matricula target);
 
 }

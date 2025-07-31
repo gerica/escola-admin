@@ -40,7 +40,7 @@ public class MatriculaServiceImpl implements MatriculaService {
 
     @Override
     @Transactional
-    public Mono<Matricula> save(MatriculaRequest request) {
+    public Mono<Void> save(MatriculaRequest request) {
         log.info("Iniciando operação de salvar/atualizar matrícula. Request: {}", request);
 
         return validateMatriculaRequest(request) // Step 1: Validate the incoming request
@@ -50,7 +50,51 @@ public class MatriculaServiceImpl implements MatriculaService {
                 .doOnSuccess(savedMatricula -> log.info("Matrícula salva com sucesso. ID: {}", savedMatricula.getId()))
                 .doOnError(e -> log.error("Falha na operação de salvar matrícula: {}", e.getMessage(), e))
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
-                .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException);
+                .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException)
+                .then();
+    }
+
+    private Mono<Matricula> buscarEntidadesLazy(Matricula savedMatricula) {
+        log.info("Iniciar inicialização de associações lazy para Matrícula ID: {}", savedMatricula.getId());
+        return Mono.fromCallable(() -> {
+            Optional<Matricula> test = repository.findByIdWithClienteAndDependente(savedMatricula.getId());
+//            System.out.println(test.get().getTurma().getNome());
+            // Inicializa a Turma (se for LAZY) e suas associações aninhadas
+            if (savedMatricula.getTurma() != null) {
+                savedMatricula.getTurma().getId(); // Acessa para inicializar Turma
+                log.info("Turma inicializada: {}", savedMatricula.getTurma().getNome());
+            }
+
+            // Inicializa o Cliente (se for LAZY) e suas associações aninhadas
+            if (savedMatricula.getCliente() != null) {
+                savedMatricula.getCliente().getId(); // Acessa para inicializar Cliente
+                log.info("Cliente inicializado: {}", savedMatricula.getCliente().getId());
+            }
+
+            // Inicializa o ClienteDependente (se for LAZY) e suas associações aninhadas
+            if (savedMatricula.getClienteDependente() != null) {
+                savedMatricula.getClienteDependente().getId(); // Acessa para inicializar ClienteDependente
+                log.info("Cliente Dependente inicializado: {}", savedMatricula.getClienteDependente().getId());
+
+            }
+            return test.get(); // Retorna a matrícula com as associações inicializadas
+        }).subscribeOn(Schedulers.boundedElastic()); // Garante que a inicialização bloqueante rode em um thread adequado
+    }
+
+    private Mono<Matricula> buscarEntidadesLazy2(Matricula savedMatricula) {
+        log.info("Iniciar lazys");
+        return Mono.fromCallable(() -> {
+            if (savedMatricula.getCliente() != null) {
+                log.debug("Inicializando lazy client: {}", savedMatricula.getCliente().getId());
+            }
+            if (savedMatricula.getClienteDependente() != null) {
+                log.debug("Inicializando lazy client dependent: {}", savedMatricula.getClienteDependente().getId());
+            }
+            if (savedMatricula.getTurma() != null) {
+                log.debug("Inicializando lazy turma: {}", savedMatricula.getTurma().getId());
+            }
+            return savedMatricula;
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 
     // --- Private Helper Methods for Clarity and Maintainability ---

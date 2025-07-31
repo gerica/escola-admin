@@ -49,7 +49,7 @@ extend type Query {
 
 extend type Mutation {
     # Salva (cria ou atualiza) um cargo
-    saveMatricula(request: MatriculaRequest!): MatriculaResponse!
+    saveMatricula(request: MatriculaRequest!): String!
 
     # Exclui um pelo seu ID
     deleteMatriculaById(id: ID!): String

@@ -125,11 +125,7 @@ public class MatriculaInitializer {
         }
 
         matriculasToCreate.forEach(request -> matriculaService.save(request)
-                .doOnSuccess(matricula -> log.info("Matrícula ID:{} (Turma: {}, Cliente:{}, Dependente:{}) salva com sucesso.",
-                        matricula.getId(),
-                        Optional.ofNullable(matricula.getTurma()).map(Turma::getNome).orElse("N/A"),
-                        Optional.ofNullable(matricula.getCliente()).map(Cliente::getNome).orElse("N/A"),
-                        Optional.ofNullable(matricula.getClienteDependente()).map(ClienteDependente::getNome).orElse("N/A")))
+                .doOnSuccess(matricula -> log.info("Matrícula salva com sucesso."))
                 .doOnError(e -> log.error("Falha ao salvar matrícula para Turma ID:{} Cliente ID:{} Dependente ID:{}: {}",
                         request.idTurma(), request.idCliente(), request.idClienteDependente(), e.getMessage()))
                 .subscribe()
