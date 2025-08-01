@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -34,14 +35,14 @@ public class Curso {
     String categoria;
 
     @Column(nullable = false) // Preço mensal ou total do curso
-    Double valorMensalidade;
+    BigDecimal valorMensalidade;
 
     @Column(nullable = false)
     @Builder.Default
     Boolean ativo = true; // Indica se o curso está ativo para matrículas (padrão: true)
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empresa_id", nullable = false)
+    @JoinColumn(name = "id_empresa", nullable = false)
     @ToString.Exclude
     Empresa empresa;
 

@@ -51,7 +51,7 @@ public class Usuario implements UserDetails {
     // Relacionamento Many-to-One com a entidade Empresa
     // O campo 'nullable = true' permite que um usuário não tenha uma empresa associada (ex: SUPER_ADMIN)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empresa_id", nullable = true)
+    @JoinColumn(name = "id_empresa", nullable = true)
     @ToString.Exclude
     Empresa empresa;
 
@@ -72,7 +72,7 @@ public class Usuario implements UserDetails {
     // 1. Mapeamento para uma coleção de Roles
     @ElementCollection(fetch = FetchType.EAGER)
     // EAGER é importante para o Spring Security carregar as roles junto com o usuário
-    @CollectionTable(name = "tb_usuario_roles", joinColumns = @JoinColumn(name = "usuario_id"))
+    @CollectionTable(name = "tb_usuario_roles", joinColumns = @JoinColumn(name = "id_usuario"))
     @Enumerated(EnumType.STRING)
     @Column(name = "role") // Nome da coluna na tabela de junção "tb_usuario_roles"
     @Builder.Default

@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record ContratoResponse(
-        Long idContrato,
+        Long id,
         Long idCliente,
         String nomeCliente,
         String numeroContrato,

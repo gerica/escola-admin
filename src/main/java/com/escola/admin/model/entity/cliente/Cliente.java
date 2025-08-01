@@ -91,7 +91,7 @@ public class Cliente {
     List<Contrato> contratos; // Referência à lista de contratos deste cliente
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empresa_id", nullable = false)
+    @JoinColumn(name = "id_empresa", nullable = false)
     @ToString.Exclude
     Empresa empresa;
 

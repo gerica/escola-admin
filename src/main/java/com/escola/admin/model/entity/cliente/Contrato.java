@@ -1,7 +1,7 @@
 package com.escola.admin.model.entity.cliente;
 
 import com.escola.admin.model.entity.Empresa;
-import com.escola.admin.model.entity.auxiliar.Turma;
+import com.escola.admin.model.entity.auxiliar.Matricula;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -23,7 +23,7 @@ public class Contrato {
 
     @Id // Marca o campo como chave primária
     @GeneratedValue(strategy = GenerationType.IDENTITY) // Estratégia de geração de valor para a chave primária (auto-incremento)
-    Long idContrato; // Usamos Long para IDs, que é uma boa prática
+    Long id; // Usamos Long para IDs, que é uma boa prática
 
     // Chave estrangeira para a entidade Cliente
     @ManyToOne // Indica um relacionamento muitos para um (muitos contratos para um cliente)
@@ -41,6 +41,9 @@ public class Contrato {
 
     @Column(name = "valor_total", nullable = false, precision = 10, scale = 2)
     BigDecimal valorTotal; // BigDecimal é ideal para valores monetários
+
+    @Column(name = "desconto", nullable = false, precision = 10, scale = 2)
+    BigDecimal desconto; // BigDecimal é ideal para valores monetários
 
     @Enumerated(EnumType.STRING) // Define como o enum será persistido no banco de dados
     @Column(name = "status_contrato", nullable = false, length = 50)
@@ -68,14 +71,14 @@ public class Contrato {
     String contratoDoc;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empresa_id", nullable = false)
+    @JoinColumn(name = "id_empresa", nullable = false)
     @ToString.Exclude
     Empresa empresa;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "turma_id", nullable = false)
+    @JoinColumn(name = "id_matricula", nullable = false)
     @ToString.Exclude
-    Turma turma;
+    Matricula matricula;
 
     @CreationTimestamp // Preenche automaticamente com a data e hora de criação
     @Column(name = "data_cadastro", nullable = false, updatable = false)

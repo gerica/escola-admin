@@ -12,11 +12,12 @@ import com.escola.admin.service.auxiliar.MatriculaService;
 import com.escola.admin.service.auxiliar.TurmaService;
 import com.escola.admin.service.cliente.ClienteDependenteService;
 import com.escola.admin.service.cliente.ClienteService;
+import com.escola.admin.service.cliente.ContratoService;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,15 +29,30 @@ import java.util.Optional;
 
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@RequiredArgsConstructor
 @Slf4j
 public class MatriculaServiceImpl implements MatriculaService {
 
     MatriculaRepository repository;
     MatriculaMapper mapper;
     TurmaService turmaService;
+    ContratoService contratoService;
     ClienteService clienteService;
     ClienteDependenteService clienteDependenteService;
+
+    public MatriculaServiceImpl(MatriculaRepository repository,
+                                MatriculaMapper mapper,
+                                TurmaService turmaService,
+                                @Lazy ContratoService contratoService,
+                                ClienteService clienteService,
+                                ClienteDependenteService
+                                        clienteDependenteService) {
+        this.repository = repository;
+        this.mapper = mapper;
+        this.turmaService = turmaService;
+        this.contratoService = contratoService;
+        this.clienteService = clienteService;
+        this.clienteDependenteService = clienteDependenteService;
+    }
 
     @Override
     @Transactional
@@ -47,6 +63,7 @@ public class MatriculaServiceImpl implements MatriculaService {
                 .then(getRequiredEntities(request)) // Step 2: Fetch all necessary entities concurrently
                 .flatMap(context -> findOrCreateMatricula(request, context.turma, context.cliente, context.dependente)) // Step 3: Find or create the Matricula entity
                 .flatMap(this::persistMatricula) // Step 4: Persist the Matricula
+                .flatMap(contratoService::criarContrato)
                 .doOnSuccess(savedMatricula -> log.info("Matrícula salva com sucesso. ID: {}", savedMatricula.getId()))
                 .doOnError(e -> log.error("Falha na operação de salvar matrícula: {}", e.getMessage(), e))
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
@@ -241,6 +258,22 @@ public class MatriculaServiceImpl implements MatriculaService {
     public Mono<Matricula> findById(Long id) {
         log.info("Buscando turma por ID: {}", id);
         return Mono.fromCallable(() -> repository.findById(id))
+                .flatMap(optionalMatricula -> {
+                    if (optionalMatricula.isPresent()) {
+                        log.info("Matricula encontrado com sucesso para ID: {}", id);
+                        return Mono.just(optionalMatricula.get());
+                    } else {
+                        log.warn("Nenhum turma encontrado para o ID: {}", id);
+                        return Mono.empty();
+                    }
+                })
+                .doOnError(e -> log.error("Erro ao buscar turma por ID {}: {}", id, e.getMessage(), e));
+    }
+
+    @Override
+    public Mono<Matricula> findByIdWithClienteAndDependente(Long id) {
+        log.info("Buscando turma por ID: {}", id);
+        return Mono.fromCallable(() -> repository.findByIdWithClienteAndDependente(id))
                 .flatMap(optionalMatricula -> {
                     if (optionalMatricula.isPresent()) {
                         log.info("Matricula encontrado com sucesso para ID: {}", id);

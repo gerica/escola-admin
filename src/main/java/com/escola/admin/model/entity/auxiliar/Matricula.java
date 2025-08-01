@@ -11,10 +11,10 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "tb_matricula", uniqueConstraints = {
         // Restrição para garantir que um Cliente não seja matriculado mais de uma vez na mesma Turma
-        @UniqueConstraint(columnNames = {"turma_id", "cliente_id"}, name = "uc_matricula_turma_cliente"),
+        @UniqueConstraint(columnNames = {"id_turma", "id_cliente"}, name = "uc_matricula_turma_cliente"),
 
         // Restrição para garantir que um ClienteDependente não seja matriculado mais de uma vez na mesma Turma
-        @UniqueConstraint(columnNames = {"turma_id", "cliente_dependente_id"}, name = "uc_matricula_turma_dependente")
+        @UniqueConstraint(columnNames = {"id_turma", "id_cliente_dependente"}, name = "uc_matricula_turma_dependente")
 })
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @AllArgsConstructor
@@ -30,7 +30,7 @@ public class Matricula {
     Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "turma_id", nullable = false)
+    @JoinColumn(name = "id_turma", nullable = false)
     @ToString.Exclude
     Turma turma; // A qual turma o aluno está matriculado
 
@@ -38,12 +38,12 @@ public class Matricula {
     String codigo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cliente_id", nullable = true) // Pode ser nulo se for um dependente
+    @JoinColumn(name = "id_cliente", nullable = true) // Pode ser nulo se for um dependente
     @ToString.Exclude
     Cliente cliente; // Se o aluno for o cliente principal
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cliente_dependente_id", nullable = true) // Pode ser nulo se for o cliente principal
+    @JoinColumn(name = "id_cliente_dependente", nullable = true) // Pode ser nulo se for o cliente principal
     @ToString.Exclude
     ClienteDependente clienteDependente; // Se o aluno for um dependente
 

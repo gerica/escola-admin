@@ -19,6 +19,7 @@ public class DataInitializer implements CommandLineRunner {
     final ClienteInitializer clienteInitializer;
     final AuxiliarInitializer auxiliarInitializer;
     final MatriculaInitializer matriculaInitializer;
+    final ContratoInitializer contratoInitializer;
 
     @Value("${modo.desenvolvimento.ligado}")
     private Boolean modoDesenvolvimentoLigado;
@@ -35,6 +36,7 @@ public class DataInitializer implements CommandLineRunner {
         clienteInitializer.carga();
         auxiliarInitializer.carga();
         matriculaInitializer.carga();
+//        contratoInitializer.carga();
         log.info("Verificação de dados iniciais concluída.");
     }
 }

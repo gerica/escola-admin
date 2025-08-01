@@ -37,9 +37,11 @@ public class ContratoController {
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
-    public ContratoResponse saveContrato(@Argument ContratoRequest request) {
-        var entity = contratoService.save(request);
-        return contratoMapper.toResponse(entity);
+    public Mono<String> saveContrato(@Argument ContratoRequest request) {
+        return contratoService.save(request)
+                .then(Mono.just("Operação realizada com sucesso."))
+                .switchIfEmpty(Mono.error(new BaseException("Não foi possível salvar contrato. O serviço retornou um resultado vazio.")))
+                .onErrorResume(BaseException.class, Mono::error);
     }
 
     @QueryMapping

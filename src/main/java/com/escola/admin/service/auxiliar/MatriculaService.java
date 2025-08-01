@@ -14,6 +14,8 @@ public interface MatriculaService {
 
     Mono<Matricula> findById(Long id);
 
+    Mono<Matricula> findByIdWithClienteAndDependente(Long id);
+
     Optional<Page<Matricula>> findByTurma(Long idTurma, Pageable pageable);
 
     Mono<Void> deleteById(Long id);

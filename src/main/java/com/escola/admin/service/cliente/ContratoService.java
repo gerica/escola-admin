@@ -1,6 +1,7 @@
 package com.escola.admin.service.cliente;
 
 
+import com.escola.admin.model.entity.auxiliar.Matricula;
 import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.request.cliente.ContratoRequest;
 import org.springframework.data.domain.Page;
@@ -21,4 +22,8 @@ public interface ContratoService {
     Optional<Void> deleteById(Integer id);
 
     Mono<Contrato> parseContrato(Long idContrato);
+
+    Long count();
+
+    Mono<Matricula> criarContrato(Matricula matricula);
 }

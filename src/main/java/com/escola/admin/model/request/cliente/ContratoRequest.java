@@ -2,15 +2,18 @@ package com.escola.admin.model.request.cliente;
 
 import com.escola.admin.model.entity.cliente.StatusContrato;
 import jakarta.validation.constraints.*;
+import lombok.Builder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+@Builder
 public record ContratoRequest(
         Long id, // O ID do cliente é essencial para associar o contrato
         @NotNull(message = "O ID da matricula não pode ser nulo.")
         Long idMatricula,
+        Long idEmpresa,
         @NotBlank(message = "O número do contrato é obrigatório.")
         @Size(max = 50, message = "O número do contrato deve ter no máximo 50 caracteres.")
         String numeroContrato,
@@ -22,6 +25,7 @@ public record ContratoRequest(
         @NotNull(message = "O valor total do contrato é obrigatório.")
         @DecimalMin(value = "0.01", message = "O valor total do contrato deve ser maior que zero.")
         BigDecimal valorTotal,
+        BigDecimal desconto,
         @NotNull(message = "O status do contrato é obrigatório.")
         StatusContrato statusContrato,
         @NotBlank(message = "A descrição do contrato é obrigatória.")

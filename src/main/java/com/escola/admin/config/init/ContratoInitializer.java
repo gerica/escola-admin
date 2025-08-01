@@ -3,12 +3,14 @@ package com.escola.admin.config.init;
 
 import com.escola.admin.controller.help.PageableHelp;
 import com.escola.admin.model.entity.Empresa;
-import com.escola.admin.model.entity.cliente.Cliente;
-import com.escola.admin.model.entity.cliente.Contrato;
+import com.escola.admin.model.entity.auxiliar.Matricula;
+import com.escola.admin.model.entity.auxiliar.Turma;
 import com.escola.admin.model.entity.cliente.StatusContrato;
-import com.escola.admin.repository.cliente.ClienteRepository;
-import com.escola.admin.repository.cliente.ContratoRepository;
+import com.escola.admin.model.request.cliente.ContratoRequest;
 import com.escola.admin.service.EmpresaService;
+import com.escola.admin.service.auxiliar.MatriculaService;
+import com.escola.admin.service.auxiliar.TurmaService;
+import com.escola.admin.service.cliente.ContratoService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -20,10 +22,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -31,51 +31,60 @@ import java.util.Random;
 @Slf4j
 public class ContratoInitializer {
 
-    ClienteRepository clienteRepository;
-    ContratoRepository contratoRepository; // Injetar o repositório de Contrato
+    EmpresaService empresaService;
+    ContratoService contratoService;
+    TurmaService turmaService;
+    MatriculaService matriculaService;
     Random random = new Random();
     PageableHelp pageableHelp;
-    EmpresaService empresaService; // Injetado o repositório de empresas
 
+    public void carga() {
+        log.info("Iniciando a verificação de dados (contrato) iniciais...");
 
-    void carga() {
-        log.info("Iniciando a verificação de dados (cliente) iniciais...");
+        criarContratos();
 
-        Optional<Empresa> empresaParaVinculo = getAnyExistingEmpresa();
-        if (empresaParaVinculo.isEmpty()) {
-            log.warn("Nenhuma empresa encontrada para vincular aos usuários. " +
-                    "Certifique-se de que o EmpresaInitializer foi executado e criou empresas.");
-        }
-
-        criarContratos(empresaParaVinculo); // Novo método para contratos
-
-        log.info("Verificação de dados iniciais (cliente) concluída.");
+        log.info("Verificação de dados iniciais (contrato) concluída.");
     }
 
     // --- NOVO MÉTODO: CRIAR CONTRATOS ---
-    void criarContratos(Optional<Empresa> empresaParaVinculo) {
-        if (contratoRepository.count() == 0) {
-            log.info("Nenhum contrato encontrado. Iniciando a criação de 25 contratos de teste...");
+    void criarContratos() {
+        if (contratoService.count() == 0) {
 
-            List<Cliente> clientes = (List<Cliente>) clienteRepository.findAll(); // Pega todos os clientes existentes
+            Optional<Empresa> empresaOptional = getAnyExistingEmpresa();
+            if (empresaOptional.isEmpty()) {
+                log.warn("Nenhuma empresa encontrada. A carga de contratos será pulada.");
+                return;
+            }
+            Empresa empresa = empresaOptional.get();
 
-            if (clientes.isEmpty()) {
-                log.warn("Nenhum cliente encontrado para associar contratos. Crie clientes primeiro.");
+            List<Turma> turmasExistentes = getExistingTurmas(empresa.getId());
+            if (turmasExistentes.isEmpty()) {
+                log.warn("Nenhuma turma encontrada. A carga de contratos será pulada.");
                 return;
             }
 
-            List<Contrato> contratos = new ArrayList<>();
+            // Mapeia todas as matrículas existentes para as turmas encontradas
+            List<Matricula> matriculasExistentes = turmasExistentes.stream()
+                    .flatMap(turma -> getExistingMatriculas(turma.getId()).stream())
+                    .collect(Collectors.toList());
+
+            if (matriculasExistentes.isEmpty()) {
+                log.warn("Nenhuma matrícula encontrada para vincular. A carga de contratos será pulada.");
+                return;
+            }
+
+            log.info("Nenhum contrato encontrado. Iniciando a criação de contratos de teste...");
             StatusContrato[] statusContratoValues = StatusContrato.values();
 
-            for (int i = 0; i < 25; i++) {
-                // Pega um cliente aleatório para associar o contrato
-                Cliente clienteAleatorio = clientes.get(random.nextInt(clientes.size()));
+            for (int i = 0; i < matriculasExistentes.size(); i++) {
+                Matricula matriculaAleatoria = matriculasExistentes.get(i);
 
                 LocalDate dataInicio = LocalDate.now().minusDays(random.nextInt(365));
                 LocalDate dataFim = dataInicio.plusMonths(random.nextInt(24) + 6); // Contratos de 6 a 30 meses
 
-                Contrato contrato = Contrato.builder()
-                        .cliente(clienteAleatorio)
+                ContratoRequest contrato = ContratoRequest.builder()
+                        .idMatricula(matriculaAleatoria.getId())
+                        .idEmpresa(empresa.getId())
                         .numeroContrato("CONTRATO-" + String.format("%05d", i + 1))
                         .dataInicio(dataInicio)
                         .dataFim(dataFim)
@@ -87,30 +96,39 @@ public class ContratoInitializer {
                         .periodoPagamento(getPeriodoPagamentoAleatorio())
                         .dataProximoPagamento(LocalDate.now().plusDays(random.nextInt(30)))
                         .observacoes("Observações diversas para o contrato " + (i + 1) + ".")
-                        .empresa(empresaParaVinculo.orElse(null))
                         .build();
 
-                contratos.add(contrato);
+                contratoService.save(contrato).block();
             }
 
-            contratoRepository.saveAll(contratos);
-            log.info(">>> 25 contratos de teste criados com sucesso e associados a clientes.");
+            log.info(">>> 5 contratos de teste criados com sucesso e associados a matrículas.");
         } else {
             log.info("Contratos já existem no banco de dados. Nenhuma ação necessária para contratos.");
         }
     }
 
-    // Helper para gerar período de pagamento aleatório
     private String getPeriodoPagamentoAleatorio() {
         String[] periodos = {"Mensal", "Trimestral", "Semestral", "Anual"};
         return periodos[random.nextInt(periodos.length)];
     }
-    // --- FIM DO NOVO MÉTODO ---
 
-    // Método auxiliar para buscar uma empresa existente
     private Optional<Empresa> getAnyExistingEmpresa() {
+        log.info("Buscando uma empresa existente para referência para matrículas...");
         Optional<Page<Empresa>> byFiltro = empresaService.findByFiltro("", pageableHelp.getPageable(0, 1, new ArrayList<>()));
-        return byFiltro.get().getContent().stream().findAny();
+        return byFiltro.isPresent() && !byFiltro.get().getContent().isEmpty() ?
+                byFiltro.get().getContent().stream().findFirst() : Optional.empty();
+    }
 
+    private List<Turma> getExistingTurmas(Long idEmpresa) {
+        log.info("Buscando turmas existentes para a empresa ID: {}", idEmpresa);
+        // Ajuste o pageable para buscar algumas turmas (ex: as 5 primeiras)
+        Optional<Page<Turma>> byFiltro = turmaService.findByFiltro("", idEmpresa, pageableHelp.getPageable(0, 5, new ArrayList<>()));
+        return byFiltro.map(Page::getContent).orElse(Collections.emptyList());
+    }
+
+    private List<Matricula> getExistingMatriculas(Long idTurma) {
+        log.info("Buscando matrículas para a turma ID: {}", idTurma);
+        Optional<Page<Matricula>> byFiltro = matriculaService.findByTurma(idTurma, pageableHelp.getPageable(0, 10, new ArrayList<>()));
+        return byFiltro.map(Page::getContent).orElse(Collections.emptyList());
     }
 }

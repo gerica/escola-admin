@@ -22,6 +22,12 @@ public interface MatriculaRepository extends CrudRepository<Matricula, Long> {
             " WHERE m.id = :id ")
     Optional<Matricula> findByIdWithClienteAndDependente(@Param("id") Long id);
 
+//    @Query("SELECT m FROM Matricula m " +
+//            "LEFT JOIN FETCH m.turma t " +
+//            "LEFT JOIN FETCH m.cliente c " +
+//            "WHERE m.id = :id")
+//    Optional<Matricula> findByIdWithTurmaAndCliente(@Param("id") Long id);
+
     @Query("SELECT m FROM Matricula m WHERE m.turma.id = :idTurma ORDER BY m.codigo DESC LIMIT 1")
     Optional<Matricula> findTopByTurmaIdOrderByCodigoDesc(@Param("idTurma") Long idTurma);
 

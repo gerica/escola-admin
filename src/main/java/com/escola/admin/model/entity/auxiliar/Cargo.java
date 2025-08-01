@@ -32,7 +32,7 @@ public class Cargo {
     Boolean ativo = true; // Indica se o cargo está ativo no sistema (padrão: true)
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empresa_id", nullable = false)
+    @JoinColumn(name = "id_empresa", nullable = false)
     @ToString.Exclude
     Empresa empresa;
 

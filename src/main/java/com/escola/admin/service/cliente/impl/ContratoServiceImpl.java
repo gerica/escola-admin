@@ -1,19 +1,21 @@
 package com.escola.admin.service.cliente.impl;
 
 import com.escola.admin.exception.BaseException;
+import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Parametro;
 import com.escola.admin.model.entity.auxiliar.Matricula;
-import com.escola.admin.model.entity.auxiliar.Turma;
-import com.escola.admin.model.entity.cliente.Cliente;
 import com.escola.admin.model.entity.cliente.Contrato;
+import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.mapper.cliente.ContratoMapper;
 import com.escola.admin.model.request.cliente.ContratoRequest;
 import com.escola.admin.repository.cliente.ContratoRepository;
+import com.escola.admin.service.EmpresaService;
 import com.escola.admin.service.ParametroService;
-import com.escola.admin.service.auxiliar.TurmaService;
+import com.escola.admin.service.auxiliar.CursoService;
+import com.escola.admin.service.auxiliar.MatriculaService;
 import com.escola.admin.service.cliente.ArtificalInteligenceService;
-import com.escola.admin.service.cliente.ClienteService;
 import com.escola.admin.service.cliente.ContratoService;
+import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -21,12 +23,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.graphql.client.HttpGraphQlClient;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.escola.admin.service.ParametroService.CHAVE_CONTRATO_MODELO_PADRAO_MAP;
 
@@ -37,36 +43,24 @@ import static com.escola.admin.service.ParametroService.CHAVE_CONTRATO_MODELO_PA
 public class ContratoServiceImpl implements ContratoService {
 
     ContratoRepository repository;
-    TurmaService turmaService;
-    ClienteService clienteService;
     ContratoMapper mapper;
-    HttpGraphQlClient graphQlClient;
     ArtificalInteligenceService parseLocal;
     ParametroService parametroService;
+    EmpresaService empresaService;
+    MatriculaService matriculaService;
+    CursoService cursoService;
 //    ArtificalInteligenceService chatgpt;
     //    ArtificalInteligenceService gemini;
 
     @Override
+    @Transactional
     public Mono<Void> save(ContratoRequest request) {
-//        Contrato entity;
-//        Optional<Contrato> optional = Optional.empty();
-//        if (request.idContrato() != null) {
-//            optional = repository.findById(request.idContrato());
-//        }
-//
-//        if (optional.isPresent()) {
-//            entity = mapper.updateEntity(request, optional.get());
-//        } else {
-//            entity = mapper.toEntity(request);
-//        }
-//
-//        return repository.save(entity);
         return validateRequest(request) // Step 1: Validate the incoming request
                 .then(getRequiredEntities(request)) // Step 2: Fetch all necessary entities concurrently
-                .flatMap(context -> findOrCreate(request, context.turma, context.cliente)) // Step 3: Find or create the Matricula entity
-                .flatMap(this::persistMatricula) // Step 4: Persist the Matricula
-                .doOnSuccess(savedMatricula -> log.info("Matrícula salva com sucesso. ID: {}", savedMatricula.getId()))
-                .doOnError(e -> log.error("Falha na operação de salvar matrícula: {}", e.getMessage(), e))
+                .flatMap(context -> findOrCreate(request, context)) // Step 3: Find or create the Matricula entity
+                .flatMap(this::persist) // Step 4: Persist the Matricula
+                .doOnSuccess(savedEntity -> log.info("Contrato salvo com sucesso. ID: {}", savedEntity.getId()))
+                .doOnError(e -> log.error("Falha na operação de salvar contrato: {}", e.getMessage(), e))
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
                 .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException)
                 .then();
@@ -124,6 +118,73 @@ public class ContratoServiceImpl implements ContratoService {
         });
     }
 
+    @Override
+    public Long count() {
+        return repository.count();
+    }
+
+
+    @Override
+    public Mono<Matricula> criarContrato(Matricula matricula) {
+        if (matricula == null || (matricula.getCliente() == null && matricula.getClienteDependente() == null)) {
+            return Mono.error(new IllegalArgumentException("A matrícula não é válida para a criação de um contrato."));
+        }
+
+        var clienteAssociado = matricula.getCliente() != null ?
+                matricula.getCliente() :
+                matricula.getClienteDependente().getCliente();
+
+        var empresaAssociada = matricula.getTurma().getEmpresa();
+        if (empresaAssociada == null) {
+            return Mono.error(new IllegalArgumentException("A turma da matrícula não possui uma empresa associada."));
+        }
+
+        // 1. Inicia o fluxo reativo a partir do ID do curso na matrícula.
+        // Como 'cursoService.findById' retorna um Mono, usamos 'flatMap' para
+        // esperar a resposta antes de prosseguir.
+        Long cursoId = matricula.getTurma().getCurso().getId();
+
+        return cursoService.findById(cursoId)
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("Curso não encontrado para a turma da matrícula.")))
+                .flatMap(cursoAssociado -> {
+
+                    BigDecimal valorTotalCalculado;
+                    Optional<Long> numeroDeMeses = getNumeroMesesDaDuracao(cursoAssociado.getDuracao());
+
+                    // Se a duração for em anos ou meses, calcula o valor total.
+                    // Se a duração não for em meses/anos (ex: horas), usa o valor mensal
+                    // como valor total do contrato (pode ser ajustado conforme a regra de negócio).
+                    valorTotalCalculado = numeroDeMeses.map(aLong -> cursoAssociado.getValorMensalidade()
+                            .multiply(BigDecimal.valueOf(aLong))
+                            .setScale(2, RoundingMode.HALF_UP)).orElseGet(cursoAssociado::getValorMensalidade);
+
+                    // 2. Dentro deste flatMap, já temos o objeto 'Curso' resolvido.
+                    // Agora podemos usar seus dados para construir o Contrato.
+                    Contrato novoContrato = Contrato.builder()
+                            .matricula(matricula)
+                            .cliente(clienteAssociado)
+                            .empresa(empresaAssociada)
+                            .numeroContrato(matricula.getTurma().getCodigo())
+                            .dataInicio(LocalDate.now())
+                            .valorTotal(valorTotalCalculado) // Acessando o valor do Mono<Curso>
+                            .desconto(new BigDecimal(5))
+                            .statusContrato(StatusContrato.PENDENTE)
+                            .descricao("Contrato de serviço educacional para a matrícula " + matricula.getId())
+                            .termosCondicoes("Termos padrão do contrato. Ver documento.")
+                            .observacoes("5% de desconto com o pagamento até o 5 dia útil do mês.")
+                            .build();
+
+                    // 3. Salva o novo contrato de forma reativa.
+                    // Envolvemos a chamada síncrona em Mono.fromCallable para não bloquear.
+                    return Mono.fromCallable(() -> repository.save(novoContrato))
+                            // 4. Após o salvamento, retorna o objeto 'Matricula' original
+                            // para continuar o fluxo.
+                            .thenReturn(matricula)
+                            // 5. Garante que a operação de bloqueio seja executada em uma thread separada.
+                            .subscribeOn(Schedulers.boundedElastic());
+                });
+    }
+
     private void converterComIA(Contrato contrato, Parametro parametro) {
 
 
@@ -145,70 +206,101 @@ public class ContratoServiceImpl implements ContratoService {
     }
 
     private Mono<EntitiesContext> getRequiredEntities(ContratoRequest request) {
-        Mono<Turma> monoTurma = turmaService.findById(request.idTurma())
-                .switchIfEmpty(Mono.error(new BaseException("Turma não encontrada com o ID: " + request.idTurma())));
+        Mono<Matricula> monoMatricua = matriculaService.findByIdWithClienteAndDependente(request.idMatricula())
+                .switchIfEmpty(Mono.error(new BaseException("Matricula não encontrada com o ID: " + request.idMatricula())));
 
-        Mono<Cliente> monoCliente = clienteService.findById(request.idCliente())
-                .switchIfEmpty(Mono.error(new BaseException("Cliente não encontrado com o ID: " + request.idCliente())));
+        Mono<Empresa> monoEmpresa = empresaService.findById(request.idEmpresa())
+                .switchIfEmpty(Mono.error(new BaseException("Empesa não encontrada com o ID: " + request.idMatricula())));
 
-//        Mono.zip() combina os resultados de múltiplos Monos em uma única tupla,
-//        permitindo que operações assíncronas independentes sejam executadas e
-//        seus resultados combinados de forma reativa e paralela.
-        return Mono.zip(monoTurma, monoCliente)
+        return Mono.zip(monoMatricua, monoEmpresa) // Zipando apenas 2 Monos agora
                 .flatMap(tuple -> {
-                    Turma turma = tuple.getT1();
-                    Cliente cliente = tuple.getT2();
-                    return Mono.just(new EntitiesContext(turma, cliente));
+                    Matricula matricula = tuple.getT1();
+                    Empresa empresa = tuple.getT2();
+
+                    return Mono.just(new EntitiesContext(matricula, empresa));
                 });
     }
 
-    private Mono<Matricula> findOrCreate(ContratoRequest request, Turma turma, Cliente cliente) {
+    private Mono<Contrato> findOrCreate(ContratoRequest request, EntitiesContext context) {
         return Mono.justOrEmpty(request.id())
                 .flatMap(id -> Mono.fromCallable(() -> repository.findById(id))
                         .flatMap(Mono::justOrEmpty)
                         .switchIfEmpty(Mono.error(new BaseException("Contrato com ID " + id + " não encontrada para atualização.")))
                 )
                 .map(existingEntity -> {
-                    log.info("Atualizando contrato existente com ID: {}", existingEntity.getIdContrato());
+                    log.info("Atualizando contrato existente com ID: {}", existingEntity.getId());
                     mapper.updateEntity(request, existingEntity);
                     return existingEntity;
                 })
                 .switchIfEmpty(Mono.defer(() -> {
-                    log.info("Criando nova entidade de contrato para a turma '{}'", turma.getNome());
-                    Contrato novaMatricula = mapper.toEntity(request);
-                    novaMatricula.setTurma(turma);
-                    novaMatricula.setCliente(cliente);
+                    log.info("Criando nova entidade de contrato para a turma '{}'", context.matricula.getTurma().getNome());
+                    Contrato entity = mapper.toEntity(request);
+                    entity.setMatricula(context.matricula);
 
-                    return Mono.fromCallable(() -> {
-                                // 1. Busca a última matrícula para esta turma (bloqueante)
-                                Optional<Matricula> lastMatriculaOpt = repository.findTopByTurmaIdOrderByCodigoDesc(turma.getId());
-                                int nextSequenceNum = 1; // Começa em 1 se não houver matrículas anteriores
+                    if (context.matricula.getCliente() != null) {
+                        entity.setCliente(context.matricula.getCliente());
+                    } else {
+                        entity.setCliente(context.matricula.getClienteDependente().getCliente());
+                    }
+                    entity.setEmpresa(context.empresa);
 
-                                if (lastMatriculaOpt.isPresent()) {
-                                    String lastCodigo = lastMatriculaOpt.get().getCodigo();
-                                    // 2. Extrai o número do último código
-                                    try {
-                                        // Pega a parte após o último hífen, que deve ser o número
-                                        String numPart = lastCodigo.substring(lastCodigo.lastIndexOf('-') + 1);
-                                        nextSequenceNum = Integer.parseInt(numPart) + 1;
-                                    } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
-                                        log.warn("Formato de código de matrícula inesperado para incremento: {}. Reiniciando a sequência para 1.", lastCodigo);
-                                        // Em caso de erro de formato, reinicia a sequência para garantir
-                                        nextSequenceNum = 1;
-                                    }
-                                }
-
-                                // 3. Formata o novo código (ex: MUS-B-24-001)
-                                String newCodigo = String.format("%s-%03d", turma.getCodigo(), nextSequenceNum);
-                                novaMatricula.setCodigo(newCodigo);
-                                return novaMatricula;
-                            })
-                            .subscribeOn(Schedulers.boundedElastic());// Executa a operação de busca no banco em um pool de threads separado
+                    entity.setNumeroContrato(context.matricula.getCodigo());
+                    return Mono.just(entity);
                 }));
     }
 
-    private record EntitiesContext(Turma turma, Cliente cliente) {
+    private Mono<Contrato> persist(Contrato entity) {
+        return Mono.fromCallable(() -> repository.save(entity)).subscribeOn(Schedulers.boundedElastic());
     }
 
+    private Throwable handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        log.warn("Violação de integridade de dados ao salvar contato: {}", e.getMessage());
+        String message = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+        String errorMessage;
+
+        if (message.contains("duplicate key") || message.contains("unique constraint")) {
+            if (message.contains("key (numero_contrato)")) {
+                errorMessage = "Já existe um contato com este número. Por favor, escolha outro.";
+            } else {
+                errorMessage = "Um registro com valores duplicados já existe. Verifique os campos únicos.";
+            }
+        } else {
+            errorMessage = "Erro de integridade de dados ao salvar o contato.";
+        }
+        return new BaseException(errorMessage, e);
+    }
+
+    /**
+     * Tenta extrair o número de meses a partir de uma string de duração.
+     * Retorna um Optional.empty() se a string não corresponder a um padrão de meses ou anos.
+     * Ex: "1 ano" -> 12, "6 meses" -> 6, "30 horas" -> Optional.empty()
+     */
+    private Optional<Long> getNumeroMesesDaDuracao(String duracaoTexto) {
+        if (duracaoTexto == null || duracaoTexto.trim().isEmpty()) {
+            return Optional.empty();
+        }
+
+        // Padrão para anos (ex: "1 ano", "2 anos")
+        Pattern anoPattern = Pattern.compile("(\\d+)\\s*ano(s?)", Pattern.CASE_INSENSITIVE);
+        Matcher anoMatcher = anoPattern.matcher(duracaoTexto);
+        if (anoMatcher.find()) {
+            long anos = Long.parseLong(anoMatcher.group(1));
+            return Optional.of(anos * 12);
+        }
+
+        // Padrão para meses (ex: "6 meses", "12 mes")
+        Pattern mesPattern = Pattern.compile("(\\d+)\\s*mes(es?)", Pattern.CASE_INSENSITIVE);
+        Matcher mesMatcher = mesPattern.matcher(duracaoTexto);
+        if (mesMatcher.find()) {
+            long meses = Long.parseLong(mesMatcher.group(1));
+            return Optional.of(meses);
+        }
+
+        return Optional.empty();
+    }
+
+    private record EntitiesContext(Matricula matricula, Empresa empresa
+    ) {
+    }
 
 }

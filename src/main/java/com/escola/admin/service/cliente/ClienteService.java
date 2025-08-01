@@ -18,4 +18,5 @@ public interface ClienteService {
     Optional<Page<Cliente>> findAtivosByFiltro(String filtro, Long empresaIdFromToken, Pageable pageable);
 
     Optional<Page<Cliente>> findAllClientsByStatusAndFiltroWithDependents(String filtro, Long empresaIdFromToken, Pageable pageable);
+
 }

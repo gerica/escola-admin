@@ -31,7 +31,7 @@ public class Turma {
     String codigo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "curso_id", nullable = false) // A turma está associada a um curso
+    @JoinColumn(name = "id_curso", nullable = false) // A turma está associada a um curso
     @ToString.Exclude
     Curso curso; // Referência à classe Curso
 
@@ -52,7 +52,7 @@ public class Turma {
     LocalTime horarioFim;
 
     @ElementCollection(targetClass = DayOfWeek.class)
-    @CollectionTable(name = "tb_turma_dias_semana", joinColumns = @JoinColumn(name = "turma_id"))
+    @CollectionTable(name = "tb_turma_dias_semana", joinColumns = @JoinColumn(name = "id_turma"))
     @Column(name = "dia_semana", nullable = false)
     @Enumerated(EnumType.STRING) // Armazena o enum como String no banco de dados
     Set<DayOfWeek> diasDaSemana; // Conjunto de dias da semana (ex: SEGUNDA, QUARTA, SEXTA)
@@ -61,7 +61,7 @@ public class Turma {
     String professor;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empresa_id", nullable = false)
+    @JoinColumn(name = "id_empresa", nullable = false)
     @ToString.Exclude
     Empresa empresa;
 
