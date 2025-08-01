@@ -63,7 +63,15 @@ public class MatriculaServiceImpl implements MatriculaService {
                 .then(getRequiredEntities(request)) // Step 2: Fetch all necessary entities concurrently
                 .flatMap(context -> findOrCreateMatricula(request, context.turma, context.cliente, context.dependente)) // Step 3: Find or create the Matricula entity
                 .flatMap(this::persistMatricula) // Step 4: Persist the Matricula
-                .flatMap(contratoService::criarContrato)
+                .flatMap(context -> {
+                    if (context.isNew()) {
+                        log.info("Matrícula é nova. Criando contrato para ID: {}", context.matricula().getId());
+                        return contratoService.criarContrato(context.matricula());
+                    } else {
+                        log.info("Matrícula é uma atualização. Pulando a criação de contrato.");
+                        return Mono.just(context.matricula());
+                    }
+                })
                 .doOnSuccess(savedMatricula -> log.info("Matrícula salva com sucesso. ID: {}", savedMatricula.getId()))
                 .doOnError(e -> log.error("Falha na operação de salvar matrícula: {}", e.getMessage(), e))
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
@@ -188,7 +196,7 @@ public class MatriculaServiceImpl implements MatriculaService {
      * @param dependente A entidade ClienteDependente já buscada.
      * @return Um Mono contendo a entidade Matricula pronta para ser salva.
      */
-    private Mono<Matricula> findOrCreateMatricula(MatriculaRequest request, Turma turma, Cliente cliente, ClienteDependente dependente) {
+    private Mono<MatriculaContext> findOrCreateMatricula(MatriculaRequest request, Turma turma, Cliente cliente, ClienteDependente dependente) {
         return Mono.justOrEmpty(request.id())
                 .flatMap(id -> Mono.fromCallable(() -> repository.findById(id))
                         .flatMap(Mono::justOrEmpty)
@@ -197,7 +205,7 @@ public class MatriculaServiceImpl implements MatriculaService {
                 .map(existingMatricula -> {
                     log.info("Atualizando matricula existente com ID: {}", existingMatricula.getId());
                     mapper.updateEntity(request, existingMatricula);
-                    return existingMatricula;
+                    return new MatriculaContext(existingMatricula, false); // É uma atualização, então isNew = false
                 })
                 .switchIfEmpty(Mono.defer(() -> {
                     log.info("Criando nova entidade de matricula para a turma '{}'", turma.getNome());
@@ -228,15 +236,16 @@ public class MatriculaServiceImpl implements MatriculaService {
                                 // 3. Formata o novo código (ex: MUS-B-24-001)
                                 String newCodigo = String.format("%s-%03d", turma.getCodigo(), nextSequenceNum);
                                 novaMatricula.setCodigo(newCodigo);
-                                return novaMatricula;
+                                return new MatriculaContext(novaMatricula, true);
                             })
                             .subscribeOn(Schedulers.boundedElastic());// Executa a operação de busca no banco em um pool de threads separado
                 }));
     }
 
     // 5. Persists the Matricula entity (blocking operation)
-    private Mono<Matricula> persistMatricula(Matricula matriculaToSave) {
-        return Mono.fromCallable(() -> repository.save(matriculaToSave))
+    private Mono<MatriculaContext> persistMatricula(MatriculaContext context) {
+        return Mono.fromCallable(() -> repository.save(context.matricula()))
+                .map(savedMatricula -> new MatriculaContext(savedMatricula, context.isNew()))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -272,7 +281,7 @@ public class MatriculaServiceImpl implements MatriculaService {
 
     @Override
     public Mono<Matricula> findByIdWithClienteAndDependente(Long id) {
-        log.info("Buscando turma por ID: {}", id);
+        log.info("Buscando turma, cliente e depentente por ID: {}", id);
         return Mono.fromCallable(() -> repository.findByIdWithClienteAndDependente(id))
                 .flatMap(optionalMatricula -> {
                     if (optionalMatricula.isPresent()) {
@@ -305,10 +314,15 @@ public class MatriculaServiceImpl implements MatriculaService {
 
     @Override
     public Mono<Void> deleteById(Long id) {
-        log.info("Solicitada exclusão de turma por ID: {}", id);
-        return Mono.fromRunnable(() -> repository.deleteById(id))
-                .doOnSuccess(v -> log.info("Matricula com ID {} excluído com sucesso.", id))
-                .doOnError(e -> log.error("Erro ao excluir turma por ID {}: {}", id, e.getMessage(), e)).then();
+        log.info("Iniciando a exclusão da matricula com ID: {}", id);
+
+        // 1. Apaga todos os contratos relacionados à matrícula de forma reativa.
+        // O .then() garante que a próxima operação só comece após a conclusão da anterior.
+        return contratoService.deleteByIdMatricula(id)
+                .then(Mono.fromRunnable(() -> repository.deleteById(id))) // 2. Apaga a matrícula, encapsulando a chamada bloqueante.
+                .doOnSuccess(v -> log.info("Matricula com ID {} e contratos relacionados excluídos com sucesso.", id))
+                .doOnError(e -> log.error("Erro ao excluir matricula por ID {}: {}", id, e.getMessage(), e))
+                .then(); // Garante o retorno de um Mono<Void> final
     }
 
     @Override
@@ -323,4 +337,6 @@ public class MatriculaServiceImpl implements MatriculaService {
     private record EntitiesContext(Turma turma, Cliente cliente, ClienteDependente dependente) {
     }
 
+    private record MatriculaContext(Matricula matricula, boolean isNew) {
+    }
 }

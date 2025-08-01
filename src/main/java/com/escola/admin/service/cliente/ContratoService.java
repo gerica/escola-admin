@@ -26,4 +26,8 @@ public interface ContratoService {
     Long count();
 
     Mono<Matricula> criarContrato(Matricula matricula);
+
+    Mono<Contrato> findByIdMatricula(Long id);
+
+    Mono<Void> deleteByIdMatricula(Long id);
 }

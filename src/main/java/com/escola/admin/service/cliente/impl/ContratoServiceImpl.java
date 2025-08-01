@@ -4,6 +4,7 @@ import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Parametro;
 import com.escola.admin.model.entity.auxiliar.Matricula;
+import com.escola.admin.model.entity.cliente.Cliente;
 import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.mapper.cliente.ContratoMapper;
@@ -52,11 +53,27 @@ public class ContratoServiceImpl implements ContratoService {
 //    ArtificalInteligenceService chatgpt;
     //    ArtificalInteligenceService gemini;
 
+    private static Contrato getContrato(Matricula matricula, Cliente clienteAssociado, Empresa empresaAssociada, BigDecimal valorTotalCalculado) {
+        Contrato novoContrato = Contrato.builder()
+                .matricula(matricula)
+                .cliente(clienteAssociado)
+                .empresa(empresaAssociada)
+                .numeroContrato(matricula.getCodigo())
+                .dataInicio(LocalDate.now())
+                .valorTotal(valorTotalCalculado) // Acessando o valor do Mono<Curso>
+                .desconto(new BigDecimal(5))
+                .statusContrato(StatusContrato.PENDENTE)
+                .descricao("Contrato de serviço educacional para a matrícula " + matricula.getId())
+                .termosCondicoes("Termos padrão do contrato. Ver documento.")
+                .observacoes("5% de desconto com o pagamento até o 5 dia útil do mês.")
+                .build();
+        return novoContrato;
+    }
+
     @Override
     @Transactional
     public Mono<Void> save(ContratoRequest request) {
-        return validateRequest(request) // Step 1: Validate the incoming request
-                .then(getRequiredEntities(request)) // Step 2: Fetch all necessary entities concurrently
+        return getRequiredEntities(request) // Step 2: Fetch all necessary entities concurrently
                 .flatMap(context -> findOrCreate(request, context)) // Step 3: Find or create the Matricula entity
                 .flatMap(this::persist) // Step 4: Persist the Matricula
                 .doOnSuccess(savedEntity -> log.info("Contrato salvo com sucesso. ID: {}", savedEntity.getId()))
@@ -86,6 +103,32 @@ public class ContratoServiceImpl implements ContratoService {
                 })
                 .doOnError(e -> log.error("Erro ao buscar contrato por ID {}: {}", id, e.getMessage(), e));
 
+    }
+
+    @Override
+    public Mono<Contrato> findByIdMatricula(Long id) {
+        log.info("Buscando Contato por ID: {}", id);
+        return Mono.fromCallable(() -> repository.findByIdMatricula(id))
+                .flatMap(entity -> {
+                    if (entity.isPresent()) {
+                        log.info("Turma encontrado com sucesso para ID: {}", id);
+                        return Mono.just(entity.get());
+                    } else {
+                        log.warn("Nenhum turma encontrado para o ID: {}", id);
+                        return Mono.empty();
+                    }
+                })
+                .doOnError(e -> log.error("Erro ao buscar contrato por ID {}: {}", id, e.getMessage(), e));
+
+    }
+
+    @Override
+    public Mono<Void> deleteByIdMatricula(Long id) {
+        log.info("Apagar Contato por ID matricula: {}", id);
+        return Mono.fromRunnable(() -> repository.deleteByMatriculaId(id))
+                .then() // Retorna um Mono<Void> para indicar a conclusão
+                .doOnSuccess(v -> log.info("Contratos excluídos com sucesso para o ID da matrícula: {}", id))
+                .doOnError(e -> log.error("Erro ao excluir contratos para o ID da matrícula {}: {}", id, e.getMessage(), e));
     }
 
     @Override
@@ -123,7 +166,6 @@ public class ContratoServiceImpl implements ContratoService {
         return repository.count();
     }
 
-
     @Override
     public Mono<Matricula> criarContrato(Matricula matricula) {
         if (matricula == null || (matricula.getCliente() == null && matricula.getClienteDependente() == null)) {
@@ -160,28 +202,13 @@ public class ContratoServiceImpl implements ContratoService {
 
                     // 2. Dentro deste flatMap, já temos o objeto 'Curso' resolvido.
                     // Agora podemos usar seus dados para construir o Contrato.
-                    Contrato novoContrato = Contrato.builder()
-                            .matricula(matricula)
-                            .cliente(clienteAssociado)
-                            .empresa(empresaAssociada)
-                            .numeroContrato(matricula.getTurma().getCodigo())
-                            .dataInicio(LocalDate.now())
-                            .valorTotal(valorTotalCalculado) // Acessando o valor do Mono<Curso>
-                            .desconto(new BigDecimal(5))
-                            .statusContrato(StatusContrato.PENDENTE)
-                            .descricao("Contrato de serviço educacional para a matrícula " + matricula.getId())
-                            .termosCondicoes("Termos padrão do contrato. Ver documento.")
-                            .observacoes("5% de desconto com o pagamento até o 5 dia útil do mês.")
-                            .build();
+                    Contrato novoContrato = getContrato(matricula, clienteAssociado, empresaAssociada, valorTotalCalculado);
 
-                    // 3. Salva o novo contrato de forma reativa.
-                    // Envolvemos a chamada síncrona em Mono.fromCallable para não bloquear.
                     return Mono.fromCallable(() -> repository.save(novoContrato))
-                            // 4. Após o salvamento, retorna o objeto 'Matricula' original
-                            // para continuar o fluxo.
-                            .thenReturn(matricula)
-                            // 5. Garante que a operação de bloqueio seja executada em uma thread separada.
-                            .subscribeOn(Schedulers.boundedElastic());
+                            .subscribeOn(Schedulers.boundedElastic())
+                            .flatMap(this::recuperarModeloContrato)
+                            .flatMap(contratoProcessado -> Mono.fromCallable(() -> repository.save(contratoProcessado)))
+                            .thenReturn(matricula);
                 });
     }
 
@@ -198,19 +225,23 @@ public class ContratoServiceImpl implements ContratoService {
         contrato.setContratoDoc(resultSmartContrato);
     }
 
-    private Mono<Void> validateRequest(ContratoRequest request) {
-        if (request.idMatricula() == null) {
-            return Mono.error(new BaseException("O ID da matricula é obrigatório."));
-        }
-        return Mono.empty(); // Indicate success
-    }
+//    private Mono<Void> validateRequest(ContratoRequest request) {
+//        if (request.idMatricula() == null) {
+//            return Mono.error(new BaseException("O ID da matricula é obrigatório."));
+//        }
+//        return Mono.empty(); // Indicate success
+//    }
 
     private Mono<EntitiesContext> getRequiredEntities(ContratoRequest request) {
+        if (request.idMatricula() == null) {
+            return Mono.just(new EntitiesContext(null, null));
+        }
+
         Mono<Matricula> monoMatricua = matriculaService.findByIdWithClienteAndDependente(request.idMatricula())
                 .switchIfEmpty(Mono.error(new BaseException("Matricula não encontrada com o ID: " + request.idMatricula())));
-
         Mono<Empresa> monoEmpresa = empresaService.findById(request.idEmpresa())
                 .switchIfEmpty(Mono.error(new BaseException("Empesa não encontrada com o ID: " + request.idMatricula())));
+
 
         return Mono.zip(monoMatricua, monoEmpresa) // Zipando apenas 2 Monos agora
                 .flatMap(tuple -> {
@@ -297,6 +328,38 @@ public class ContratoServiceImpl implements ContratoService {
         }
 
         return Optional.empty();
+    }
+
+//    private Mono<Contrato> recuperarModeloContrato(Contrato contrato) {
+//        return Mono.defer(() -> { // Mono.defer para garantir que a lógica seja executada apenas na subscrição
+//            try {
+//                Mono<Parametro> parametroMono = parametroService.findByChave(CHAVE_CONTRATO_MODELO_PADRAO);
+//
+//                return parametroMono
+//                        .flatMap(parametro -> {
+//                            converterComIA(contrato, parametro);
+//                            return Mono.just(contrato); // Retorna o contrato modificado
+//
+//                        })
+//                        .doOnError(e -> log.error("Erro ao chamar o admin-service: {}", e.getMessage())) // Captura erros
+//                        .onErrorResume(e -> Mono.empty()); // Em caso de erro, retorna um Mono vazio
+//            } catch (Exception e) {
+//                log.error("Erro ao chamar o admin-service (inicialização): {}", e.getMessage());
+//                return Mono.error(e); // Retorna um Mono com erro para falhas na fase de defer
+//            }
+//        });
+//    }
+
+    private Mono<Contrato> recuperarModeloContrato(Contrato contrato) {
+        return Mono.defer(() -> {
+            Mono<Parametro> parametroMono = parametroService.findByChave(CHAVE_CONTRATO_MODELO_PADRAO);
+            return parametroMono
+                    .flatMap(parametro -> {
+                        converterComIA(contrato, parametro);
+                        return Mono.just(contrato);
+                    })
+                    .doOnError(e -> log.error("Erro ao chamar o serviço de IA: {}", e.getMessage()));
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 
     private record EntitiesContext(Matricula matricula, Empresa empresa

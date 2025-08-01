@@ -70,8 +70,14 @@ public class ContratoController {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public Mono<ContratoResponse> fetchByIdContrato(@Argument Long id) {
+    public Mono<ContratoResponse> fetchById(@Argument Long id) {
         return contratoService.findById(id).map(contratoMapper::toResponse);
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    public Mono<ContratoResponse> fetchContratoByIdMatricula(@Argument Long id) {
+        return contratoService.findByIdMatricula(id).map(contratoMapper::toResponse);
     }
 
     @QueryMapping
@@ -87,13 +93,8 @@ public class ContratoController {
         log.info("Executando parse contrato com o id: {}", id);
         return contratoService.parseContrato(id)
                 .map(contratoMapper::toResponse) // Se o Optional contiver um valor, aplica o mapper
-                .switchIfEmpty(Mono.error(new BaseException("Não foi fazer o parse do contrato. O serviço retornou um resultado vazio.")))
+                .switchIfEmpty(Mono.error(new BaseException("Não foi possível fazer o parse do contrato. O serviço retornou um resultado vazio.")))
                 .onErrorResume(BaseException.class, Mono::error);
-//        return contratoService.parseContrato(id).map(contratoMapper::toResponse);
-//        return contratoService.parseContrato(id)
-//                .map(contratoMapper::toResponse)
-//                .orElseThrow(() -> new NoSuchElementException("Contrato com ID " + id + " não encontrado."));
-        // Ou uma exceção mais específica, com
     }
 
 }

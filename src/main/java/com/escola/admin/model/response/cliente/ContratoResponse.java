@@ -15,6 +15,7 @@ public record ContratoResponse(
         LocalDate dataInicio,
         LocalDate dataFim,
         BigDecimal valorTotal,
+        BigDecimal desconto,
         StatusContrato statusContrato,
         String descricao,
         String termosCondicoes,

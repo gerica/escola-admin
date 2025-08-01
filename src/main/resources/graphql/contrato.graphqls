@@ -1,10 +1,11 @@
 input ContratoRequest {
-    idContrato: ID
+    id: ID
     idCliente: ID!
     numeroContrato: String!
     dataInicio: Date!
     dataFim: Date!
     valorTotal: BigDecimal!
+    desconto: BigDecimal!
     statusContrato: String!
     descricao: String
     termosCondicoes: String
@@ -16,13 +17,14 @@ input ContratoRequest {
 }
 
 type ContratoResponse {
-    idContrato: ID
+    id: ID
     idCliente: ID
     nomeCliente: String
     numeroContrato: String
     dataInicio: Date
     dataFim: Date
     valorTotal: BigDecimal
+    desconto: BigDecimal
     statusContrato: String
     descricao: String
     termosCondicoes: String
@@ -52,11 +54,12 @@ extend type Query {
         sort: [SortRequest]
     ): ContratoResponsePage!
 
-    fetchByIdContrato(id: ID): ContratoResponse!
+    fetchById(id: ID): ContratoResponse!
+    fetchContratoByIdMatricula(id: ID): ContratoResponse!
 }
 
 extend type Mutation {
-    saveContrato(request: ContratoRequest!): ContratoResponse!
+    saveContrato(request: ContratoRequest!): String!
     parseContrato(id: ID!): ContratoResponse!
 }
 
