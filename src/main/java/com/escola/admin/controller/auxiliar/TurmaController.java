@@ -61,7 +61,9 @@ public class TurmaController {
                 request.horarioInicio(),
                 request.horarioFim(),
                 request.diasDaSemana(),
-                request.professor()
+                request.professor(),
+                request.dataInicio(),
+                request.dataFim()
         );
         return turmaService.save(updatedRequest)
                 .map(turmaMapper::toResponse)

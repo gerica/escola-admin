@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Set;
 
@@ -24,6 +25,10 @@ public record TurmaResponse(
         @JsonFormat(pattern = "HH:mm")
         LocalTime horarioFim,
         Set<DayOfWeek> diasDaSemana, // Conjunto de dias da semana (ex: SEGUNDA, QUARTA, SEXTA)
-        String professor
+        String professor,
+        @JsonFormat(pattern = "yyyy-MM-dd")
+        LocalDate dataInicio,
+        @JsonFormat(pattern = "yyyy-MM-dd")
+        LocalDate dataFim
 ) {
 }

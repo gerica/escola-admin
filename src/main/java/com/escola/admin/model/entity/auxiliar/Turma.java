@@ -6,6 +6,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Set;
@@ -65,15 +66,20 @@ public class Turma {
     @ToString.Exclude
     Empresa empresa;
 
+    @OneToMany(mappedBy = "turma", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    Set<Matricula> matriculas;
+
+    @Column(nullable = false, updatable = false)
+    LocalDate dataInicio; // Data e hora de criação do registro
+
+    LocalDate dataFim;
+
     @Column(nullable = false, updatable = false)
     LocalDateTime dataCadastro; // Data e hora de criação do registro
 
     @Column(nullable = false)
     LocalDateTime dataAtualizacao; // Data e hora da última atualização do registro
-
-    @OneToMany(mappedBy = "turma", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @ToString.Exclude
-    Set<Matricula> matriculas;
 
 
     // Métodos de callback JPA para gerenciar datas de criação e atualização

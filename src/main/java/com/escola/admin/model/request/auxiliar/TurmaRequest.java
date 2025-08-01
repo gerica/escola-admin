@@ -4,6 +4,7 @@ import com.escola.admin.model.entity.auxiliar.StatusTurma;
 import lombok.Builder;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Set;
 
@@ -20,6 +21,8 @@ public record TurmaRequest(
         LocalTime horarioInicio,
         LocalTime horarioFim,
         Set<DayOfWeek> diasDaSemana, // Conjunto de dias da semana (ex: SEGUNDA, QUARTA, SEXTA)
-        String professor
+        String professor,
+        LocalDate dataInicio,
+        LocalDate dataFim
 ) {
 }

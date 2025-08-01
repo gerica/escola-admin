@@ -22,6 +22,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
 
@@ -99,6 +100,8 @@ public class AuxiliarInitializer {
                         .professor("Ana Clara")
                         .idEmpresa(empresa.getId())
                         .idCurso(cursosExistentes.get(0).getId())
+                        .dataInicio(LocalDate.of(2025, 1, 31))
+                        .dataFim(LocalDate.of(2025, 12, 31))
                         .build(),
                 TurmaRequest.builder()
                         .nome("Jazz Tarde 2024")
@@ -112,6 +115,8 @@ public class AuxiliarInitializer {
                         .professor("Bruno Rocha")
                         .idEmpresa(empresa.getId())
                         .idCurso(cursosExistentes.get(1).getId())
+                        .dataInicio(LocalDate.of(2025, 1, 31))
+                        .dataFim(LocalDate.of(2025, 12, 31))
                         .build(),
                 TurmaRequest.builder()
                         .nome("Bebês Musicalizados 2024")
@@ -125,6 +130,8 @@ public class AuxiliarInitializer {
                         .professor("Carla Dias")
                         .idEmpresa(empresa.getId())
                         .idCurso(cursosExistentes.get(2).getId())
+                        .dataInicio(LocalDate.of(2025, 1, 31))
+                        .dataFim(LocalDate.of(2025, 12, 31))
                         .build(),
                 TurmaRequest.builder()
                         .nome("Pré-Escola Integral 2024")
@@ -138,6 +145,8 @@ public class AuxiliarInitializer {
                         .professor("Fernanda Lima")
                         .idEmpresa(empresa.getId())
                         .idCurso(cursosExistentes.get(3).getId())
+                        .dataInicio(LocalDate.of(2025, 1, 31))
+                        .dataFim(LocalDate.of(2025, 12, 31))
                         .build(),
                 TurmaRequest.builder()
                         .nome("Hip Hop Noite 2024")
@@ -151,6 +160,8 @@ public class AuxiliarInitializer {
                         .professor("Lucas Mendes")
                         .idEmpresa(empresa.getId())
                         .idCurso(cursosExistentes.get(4).getId())
+                        .dataInicio(LocalDate.of(2025, 1, 31))
+                        .dataFim(LocalDate.of(2025, 12, 31))
                         .build()
         );
 

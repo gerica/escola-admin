@@ -30,7 +30,6 @@ import reactor.core.scheduler.Schedulers;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -59,10 +58,12 @@ public class ContratoServiceImpl implements ContratoService {
                 .cliente(clienteAssociado)
                 .empresa(empresaAssociada)
                 .numeroContrato(matricula.getCodigo())
-                .dataInicio(LocalDate.now())
+                .dataInicio(matricula.getTurma().getDataInicio())
+                .dataFim(matricula.getTurma().getDataFim())
                 .valorTotal(valorTotalCalculado) // Acessando o valor do Mono<Curso>
                 .desconto(new BigDecimal(5))
                 .statusContrato(StatusContrato.PENDENTE)
+                .periodoPagamento("Mensal")
                 .descricao("Contrato de serviço educacional para a matrícula " + matricula.getId())
                 .termosCondicoes("Termos padrão do contrato. Ver documento.")
                 .observacoes("5% de desconto com o pagamento até o 5 dia útil do mês.")
@@ -329,26 +330,6 @@ public class ContratoServiceImpl implements ContratoService {
 
         return Optional.empty();
     }
-
-//    private Mono<Contrato> recuperarModeloContrato(Contrato contrato) {
-//        return Mono.defer(() -> { // Mono.defer para garantir que a lógica seja executada apenas na subscrição
-//            try {
-//                Mono<Parametro> parametroMono = parametroService.findByChave(CHAVE_CONTRATO_MODELO_PADRAO);
-//
-//                return parametroMono
-//                        .flatMap(parametro -> {
-//                            converterComIA(contrato, parametro);
-//                            return Mono.just(contrato); // Retorna o contrato modificado
-//
-//                        })
-//                        .doOnError(e -> log.error("Erro ao chamar o admin-service: {}", e.getMessage())) // Captura erros
-//                        .onErrorResume(e -> Mono.empty()); // Em caso de erro, retorna um Mono vazio
-//            } catch (Exception e) {
-//                log.error("Erro ao chamar o admin-service (inicialização): {}", e.getMessage());
-//                return Mono.error(e); // Retorna um Mono com erro para falhas na fase de defer
-//            }
-//        });
-//    }
 
     private Mono<Contrato> recuperarModeloContrato(Contrato contrato) {
         return Mono.defer(() -> {

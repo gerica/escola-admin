@@ -60,6 +60,10 @@ spring:
   jackson:
     default-property-inclusion: ALWAYS
 
+  devtools:
+    restart:
+      poll-interval: 2s
+      quiet-period: 1s
 #    ALWAYS: Garante que todas as propriedades sejam incluídas no JSON, independentemente do seu valor (incluindo null). Esta é a configuração que o Apollo Client espera para campos anuláveis.
 #    NON_NULL: (O que você usou) Exclui propriedades que têm valor null.
 #    NON_EMPTY: Exclui propriedades que são null ou vazias (strings vazias, coleções vazias, etc.).

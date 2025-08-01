@@ -73,6 +73,8 @@ dependencies {
 	// Garante a integração correta entre Lombok e MapStruct.
 	annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
 
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
 	// --- Testing ---
 	// Starter principal para testes, incluindo JUnit 5, Mockito e AssertJ.
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'

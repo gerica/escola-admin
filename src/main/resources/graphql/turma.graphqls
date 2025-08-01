@@ -1,3 +1,20 @@
+# Define o tipo de entrada para criar ou atualizar um Turma
+input TurmaRequest {
+    id: ID
+    idCurso: ID!
+    nome: String
+    codigo: String
+    capacidadeMaxima: ID
+    status: StatusTurma
+    anoPeriodo: String
+    horarioInicio: LocalTime,
+    horarioFim: LocalTime,
+    diasDaSemana: [DayOfWeek]
+    professor: String,
+    dataInicio: Date
+    dataFim: Date
+}
+
 # Define o tipo Turma que será retornado pelas queries
 type TurmaResponse {
     id: ID!
@@ -11,23 +28,11 @@ type TurmaResponse {
     horarioInicio: String,
     horarioFim: String,
     diasDaSemana: [DayOfWeek]
-    professor: String
+    professor: String,
+    dataInicio: Date
+    dataFim: Date
 }
 
-# Define o tipo de entrada para criar ou atualizar um Turma
-input TurmaRequest {
-    id: ID
-    idCurso: ID!
-    nome: String
-    codigo: String
-    capacidadeMaxima: ID
-    status: StatusTurma
-    anoPeriodo: String
-    horarioInicio: LocalTime,
-    horarioFim: LocalTime,
-    diasDaSemana: [DayOfWeek]
-    professor: String
-}
 
 # Define a estrutura de uma página de Turmas
 type TurmaResponsePage {
