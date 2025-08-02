@@ -13,33 +13,43 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @Order(1)
 public class CustomDataFetcherExceptionResolver implements DataFetcherExceptionResolver {
 
-    private static final Logger log = LoggerFactory.getLogger(CustomDataFetcherExceptionResolver.class); // Instanciar Logger
+    private static final Logger log = LoggerFactory.getLogger(CustomDataFetcherExceptionResolver.class);
 
     @Override
     public Mono<List<GraphQLError>> resolveException(Throwable exception, DataFetchingEnvironment environment) {
-        log.error("Exception caught by CustomDataFetcherExceptionResolver: {}", exception.getClass().getName(), exception); // Log the exception type
+        log.error("Exception caught by CustomDataFetcherExceptionResolver: {}", exception.getClass().getName(), exception);
         if (exception.getCause() != null) {
             log.error("Root cause of the exception: {}", exception.getCause().getClass().getName(), exception.getCause());
         }
 
-        if (exception instanceof BaseException baseException) {
-            log.info("Handling BaseException: {}", baseException.getMessage());
-            // ... (rest of your existing code for BaseException)
-            SourceLocation location = null;
-            if (environment.getField() != null && environment.getField().getSourceLocation() != null) {
-                location = environment.getField().getSourceLocation();
-            } else if (environment.getOperationDefinition() != null && environment.getOperationDefinition().getSourceLocation() != null) {
-                location = environment.getOperationDefinition().getSourceLocation();
-            }
+        // Tenta encontrar a BaseException, seja na exceção atual ou na causa raiz.
+        Optional<BaseException> baseExceptionOptional = Optional.of(exception)
+                .filter(BaseException.class::isInstance)
+                .map(BaseException.class::cast)
+                .or(() -> Optional.ofNullable(exception.getCause())
+                        .filter(BaseException.class::isInstance)
+                        .map(BaseException.class::cast));
 
-            List<Object> path = environment.getExecutionStepInfo() != null &&
-                    environment.getExecutionStepInfo().getPath() != null ?
-                    environment.getExecutionStepInfo().getPath().toList() : null;
+        if (baseExceptionOptional.isPresent()) {
+            BaseException baseException = baseExceptionOptional.get();
+            log.info("Handling BaseException with message: {}", baseException.getMessage());
+
+            SourceLocation location = Optional.ofNullable(environment.getField())
+                    .map(field -> field.getSourceLocation())
+                    .orElseGet(() -> Optional.ofNullable(environment.getOperationDefinition())
+                            .map(operation -> operation.getSourceLocation())
+                            .orElse(null));
+
+            List<Object> path = Optional.ofNullable(environment.getExecutionStepInfo())
+                    .map(info -> info.getPath())
+                    .map(pathInfo -> pathInfo.toList())
+                    .orElse(null);
 
             GraphQLError error = GraphQLError.newError()
                     .message(baseException.getMessage())
@@ -47,22 +57,13 @@ public class CustomDataFetcherExceptionResolver implements DataFetcherExceptionR
                     .path(path)
                     .errorType(ErrorType.BAD_REQUEST)
                     .build();
+
             return Mono.just(List.of(error));
         }
-        // If it's not a BaseException, you could convert it to a generic BAD_REQUEST
-        // or let it fall through to be an INTERNAL_ERROR.
-        // For debugging, let's explicitly convert any other exception to a BAD_REQUEST
-        // to see if it catches anything. This is temporary for debugging.
-        log.warn("Exception is not a BaseException, letting other resolvers handle or returning default error.");
 
-        // This part is for debugging purposes to see if ANY exception gets here.
-        // In production, you might want Mono.empty() for unhandled exceptions.
-        GraphQLError genericError = GraphQLError.newError()
-//                .message("An unexpected error occurred: " + exception.getMessage())
-                .message(exception.getMessage())
-                .errorType(ErrorType.INTERNAL_ERROR) // Still an internal error, but with more info
-                .build();
-        return Mono.just(List.of(genericError));
-        // return Mono.empty(); // For production, if you only want to handle BaseException
+        log.warn("Exception is not a BaseException or a BaseException cause. Let's return an empty Mono to allow other resolvers to handle it.");
+        // Devolve Mono.empty() para que outros resolvers possam agir ou
+        // o Spring GraphQL retorne o erro padrão INTERNAL_ERROR.
+        return Mono.empty();
     }
 }

@@ -96,4 +96,5 @@ extend type Query {
 
 extend type Mutation {
     saveCliente(request: ClienteRequest!): ClienteResponse!
+    deleteClienteById(id: ID!): String!
 }

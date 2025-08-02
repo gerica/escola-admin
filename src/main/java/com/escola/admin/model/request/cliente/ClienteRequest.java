@@ -2,12 +2,14 @@ package com.escola.admin.model.request.cliente;
 
 
 import com.escola.admin.model.entity.cliente.StatusCliente;
+import lombok.Builder;
 
 import java.time.LocalDate;
 
+@Builder
 public record ClienteRequest(
         Long id,
-        Integer idEmpresa,
+        Long idEmpresa,
         String nome,
         LocalDate dataNascimento,
         String cidade,

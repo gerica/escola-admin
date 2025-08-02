@@ -3,6 +3,7 @@ package com.escola.admin.controller.cliente;
 
 import com.escola.admin.controller.help.PageableHelp;
 import com.escola.admin.controller.help.SortInput;
+import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.cliente.ClienteMapper;
 import com.escola.admin.model.request.cliente.ClienteRequest;
@@ -34,9 +35,36 @@ public class ClienteController {
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
-    public ClienteResponse saveCliente(@Argument ClienteRequest request) {
-        var entity = clienteService.save(request);
-        return clienteMapper.toResponse(entity);
+    public Mono<ClienteResponse> saveCliente(@Argument ClienteRequest request, Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
+        // Create a new CargoRequest with the updated idEmpresa
+        ClienteRequest updatedRequest = new ClienteRequest(
+                request.id(),
+                usuarioAutenticado.getEmpresaIdFromToken(), // Set the idEmpresa here
+                request.nome(),
+                request.dataNascimento(),
+                request.cidade(),
+                request.uf(),
+                request.codigoCidade(),
+                request.docCPF(),
+                request.docRG(),
+                request.telResidencial(),
+                request.telCelular(),
+                request.endereco(),
+                request.email(),
+                request.profissao(),
+                request.localTrabalho(),
+                request.statusCliente()
+        );
+        return clienteService.save(updatedRequest)
+                .map(clienteMapper::toResponse)
+//                .then(Mono.just("Operação realizada com sucesso."))
+                .switchIfEmpty(Mono.error(new BaseException("Não foi possível salvar cliente. O serviço retornou um resultado vazio.")))
+                .onErrorResume(BaseException.class, Mono::error);
+
     }
 
     @QueryMapping
@@ -109,4 +137,12 @@ public class ClienteController {
         return clienteService.findById(id).map(clienteMapper::toResponse);
     }
 
+    @MutationMapping
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
+    public Mono<String> deleteClienteById(@Argument Long id) {
+        return clienteService.deleteById(id)
+                .then(Mono.just("Operação realizada com sucesso."))
+                .onErrorResume(BaseException.class, Mono::error);
+//                .onErrorResume(e -> Mono.error(new GraphQLException("Falha realizar operação: " + e.getMessage())));
+    }
 }

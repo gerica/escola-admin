@@ -9,7 +9,7 @@ import reactor.core.publisher.Mono;
 import java.util.Optional;
 
 public interface ClienteService {
-    Cliente save(ClienteRequest request);
+    Mono<Cliente> save(ClienteRequest request);
 
     Optional<Page<Cliente>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable);
 
@@ -19,4 +19,5 @@ public interface ClienteService {
 
     Optional<Page<Cliente>> findAllClientsByStatusAndFiltroWithDependents(String filtro, Long empresaIdFromToken, Pageable pageable);
 
+    Mono<Void> deleteById(Long id);
 }
