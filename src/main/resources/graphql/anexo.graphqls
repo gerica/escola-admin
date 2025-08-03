@@ -1,0 +1,37 @@
+input AnexoRequest{
+    id: ID
+    idContrato: ID!
+    nomeArquivo: String
+    conteudoBase64: String
+}
+
+# Define o tipo Anexo que será retornado pelas queries
+type AnexoResponse {
+    id: ID!
+    uuid: String!
+    nomeArquivo: String
+    dataCadastro: Date
+}
+
+# Define a estrutura de uma página de Anexos
+type AnexoResponsePage {
+    content: [AnexoResponse!]!
+    totalPages: Int!
+    totalElements: Long!
+    number: Int! # Número da página atual
+    size: Int! # Tamanho da página
+    first: Boolean!
+    last: Boolean!
+    empty: Boolean!
+}
+
+extend type Query {
+    # Busca um curso pelo seu ID
+    anexosDoContrato(idContrato: ID!): [AnexoResponse]
+
+}
+
+extend type Mutation {
+    uploadAnexo(request: AnexoRequest!): AnexoResponse!
+    deleteAnexoById(id: ID!): String!
+}
