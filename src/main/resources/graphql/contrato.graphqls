@@ -13,6 +13,10 @@ input ContratoRequest {
     periodoPagamento: String
     dataProximoPagamento: Date
     observacoes: String
+}
+
+input ContratoModeloRequest{
+    id: ID!
     contratoDoc: String
 }
 
@@ -60,6 +64,7 @@ extend type Query {
 
 extend type Mutation {
     saveContrato(request: ContratoRequest!): String!
+    saveContratoModelo(request: ContratoModeloRequest!): String!
     parseContrato(id: ID!): ContratoResponse!
 }
 

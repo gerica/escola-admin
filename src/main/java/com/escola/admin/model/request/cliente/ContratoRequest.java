@@ -47,7 +47,6 @@ public record ContratoRequest(
         String periodoPagamento, // Ex: Mensal, Anual
         @FutureOrPresent(message = "A data do próximo pagamento não pode ser passada.")
         LocalDate dataProximoPagamento,
-        String observacoes,
-        String contratoDoc
+        String observacoes
 ) {
 }

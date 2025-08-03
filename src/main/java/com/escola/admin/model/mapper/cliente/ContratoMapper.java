@@ -27,6 +27,7 @@ public interface ContratoMapper {
     @Mapping(target = "matricula", ignore = true)
     @Mapping(target = "dataCadastro", ignore = true)
     @Mapping(target = "dataAtualizacao", ignore = true)
+    @Mapping(target = "contratoDoc", ignore = true)
     Contrato toEntity(ContratoRequest request);
 
     @Mapping(target = "cliente", ignore = true)
@@ -34,6 +35,7 @@ public interface ContratoMapper {
     @Mapping(target = "matricula", ignore = true)
     @Mapping(target = "dataCadastro", ignore = true)
     @Mapping(target = "dataAtualizacao", ignore = true)
+    @Mapping(target = "contratoDoc", ignore = true)
     Contrato updateEntity(ContratoRequest source, @MappingTarget Contrato target);
 
     /**

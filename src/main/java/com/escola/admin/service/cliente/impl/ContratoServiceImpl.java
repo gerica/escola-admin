@@ -3,11 +3,13 @@ package com.escola.admin.service.cliente.impl;
 import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Parametro;
+import com.escola.admin.model.entity.auxiliar.Curso;
 import com.escola.admin.model.entity.auxiliar.Matricula;
 import com.escola.admin.model.entity.cliente.Cliente;
 import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.mapper.cliente.ContratoMapper;
+import com.escola.admin.model.request.cliente.ContratoModeloRequest;
 import com.escola.admin.model.request.cliente.ContratoRequest;
 import com.escola.admin.repository.cliente.ContratoRepository;
 import com.escola.admin.service.EmpresaService;
@@ -30,6 +32,8 @@ import reactor.core.scheduler.Schedulers;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -52,13 +56,18 @@ public class ContratoServiceImpl implements ContratoService {
 //    ArtificalInteligenceService chatgpt;
     //    ArtificalInteligenceService gemini;
 
-    private static Contrato getContrato(Matricula matricula, Cliente clienteAssociado, Empresa empresaAssociada, BigDecimal valorTotalCalculado) {
-        Contrato novoContrato = Contrato.builder()
+    Contrato criarObjectoContrato(Matricula matricula, Cliente clienteAssociado, Empresa empresaAssociada, Curso cursoAssociado) {
+
+        LocalDate dtInicio = getLocalDate(matricula);
+
+        BigDecimal valorTotalCalculado = getValorTotalCalculado(cursoAssociado, dtInicio, matricula.getTurma().getDataFim());
+
+        return Contrato.builder()
                 .matricula(matricula)
                 .cliente(clienteAssociado)
                 .empresa(empresaAssociada)
                 .numeroContrato(matricula.getCodigo())
-                .dataInicio(matricula.getTurma().getDataInicio())
+                .dataInicio(dtInicio)
                 .dataFim(matricula.getTurma().getDataFim())
                 .valorTotal(valorTotalCalculado) // Acessando o valor do Mono<Curso>
                 .desconto(new BigDecimal(5))
@@ -68,7 +77,32 @@ public class ContratoServiceImpl implements ContratoService {
                 .termosCondicoes("Termos padrão do contrato. Ver documento.")
                 .observacoes("5% de desconto com o pagamento até o 5 dia útil do mês.")
                 .build();
-        return novoContrato;
+    }
+
+    BigDecimal getValorTotalCalculado(Curso cursoAssociado, LocalDate dtInicio, LocalDate dataFim) {
+        BigDecimal valorTotalCalculado;
+        long numeroDeMeses = ChronoUnit.MONTHS.between(dtInicio, dataFim);
+
+        // Garante que o número de meses seja no mínimo 1, caso as datas sejam no mesmo mês.
+        // Isso evita um valor total de zero em contratos de um mês.
+        if (numeroDeMeses == 0) {
+            numeroDeMeses = 1;
+        }
+
+        return valorTotalCalculado = cursoAssociado.getValorMensalidade()
+                .multiply(BigDecimal.valueOf(numeroDeMeses))
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    LocalDate getLocalDate(Matricula matricula) {
+        LocalDate dtInicio;
+        LocalDate hoje = LocalDate.now();
+        if (hoje.isAfter(matricula.getTurma().getDataInicio())) {
+            dtInicio = hoje;
+        } else {
+            dtInicio = matricula.getTurma().getDataInicio();
+        }
+        return dtInicio;
     }
 
     @Override
@@ -76,6 +110,19 @@ public class ContratoServiceImpl implements ContratoService {
     public Mono<Void> save(ContratoRequest request) {
         return getRequiredEntities(request) // Step 2: Fetch all necessary entities concurrently
                 .flatMap(context -> findOrCreate(request, context)) // Step 3: Find or create the Matricula entity
+                .flatMap(this::persist) // Step 4: Persist the Matricula
+                .doOnSuccess(savedEntity -> log.info("Contrato salvo com sucesso. ID: {}", savedEntity.getId()))
+                .doOnError(e -> log.error("Falha na operação de salvar contrato: {}", e.getMessage(), e))
+                .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
+                .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException)
+                .then();
+    }
+
+    @Override
+    @Transactional
+    public Mono<Void> saveModelo(ContratoModeloRequest request) {
+        return findById(request.id())
+                .flatMap(context -> parseModelo(request)) // Step 3: Find or create the Matricula entity
                 .flatMap(this::persist) // Step 4: Persist the Matricula
                 .doOnSuccess(savedEntity -> log.info("Contrato salvo com sucesso. ID: {}", savedEntity.getId()))
                 .doOnError(e -> log.error("Falha na operação de salvar contrato: {}", e.getMessage(), e))
@@ -191,19 +238,7 @@ public class ContratoServiceImpl implements ContratoService {
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("Curso não encontrado para a turma da matrícula.")))
                 .flatMap(cursoAssociado -> {
 
-                    BigDecimal valorTotalCalculado;
-                    Optional<Long> numeroDeMeses = getNumeroMesesDaDuracao(cursoAssociado.getDuracao());
-
-                    // Se a duração for em anos ou meses, calcula o valor total.
-                    // Se a duração não for em meses/anos (ex: horas), usa o valor mensal
-                    // como valor total do contrato (pode ser ajustado conforme a regra de negócio).
-                    valorTotalCalculado = numeroDeMeses.map(aLong -> cursoAssociado.getValorMensalidade()
-                            .multiply(BigDecimal.valueOf(aLong))
-                            .setScale(2, RoundingMode.HALF_UP)).orElseGet(cursoAssociado::getValorMensalidade);
-
-                    // 2. Dentro deste flatMap, já temos o objeto 'Curso' resolvido.
-                    // Agora podemos usar seus dados para construir o Contrato.
-                    Contrato novoContrato = getContrato(matricula, clienteAssociado, empresaAssociada, valorTotalCalculado);
+                    Contrato novoContrato = criarObjectoContrato(matricula, clienteAssociado, empresaAssociada, cursoAssociado);
 
                     return Mono.fromCallable(() -> repository.save(novoContrato))
                             .subscribeOn(Schedulers.boundedElastic())
@@ -225,13 +260,6 @@ public class ContratoServiceImpl implements ContratoService {
 
         contrato.setContratoDoc(resultSmartContrato);
     }
-
-//    private Mono<Void> validateRequest(ContratoRequest request) {
-//        if (request.idMatricula() == null) {
-//            return Mono.error(new BaseException("O ID da matricula é obrigatório."));
-//        }
-//        return Mono.empty(); // Indicate success
-//    }
 
     private Mono<EntitiesContext> getRequiredEntities(ContratoRequest request) {
         if (request.idMatricula() == null) {
@@ -341,6 +369,19 @@ public class ContratoServiceImpl implements ContratoService {
                     })
                     .doOnError(e -> log.error("Erro ao chamar o serviço de IA: {}", e.getMessage()));
         }).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private Mono<Contrato> parseModelo(ContratoModeloRequest request) {
+        return Mono.justOrEmpty(request.id())
+                .flatMap(id -> Mono.fromCallable(() -> repository.findById(id))
+                        .flatMap(Mono::justOrEmpty)
+                        .switchIfEmpty(Mono.error(new BaseException("Contrato com ID " + id + " não encontrada para atualização.")))
+                )
+                .map(existingEntity -> {
+                    log.info("Atualizando contrato existente com ID: {}", existingEntity.getId());
+                    existingEntity.setContratoDoc(request.contratoDoc());
+                    return existingEntity;
+                });
     }
 
     private record EntitiesContext(Matricula matricula, Empresa empresa

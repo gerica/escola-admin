@@ -5,6 +5,7 @@ import com.escola.admin.controller.help.SortInput;
 import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.cliente.ContratoMapper;
+import com.escola.admin.model.request.cliente.ContratoModeloRequest;
 import com.escola.admin.model.request.cliente.ContratoRequest;
 import com.escola.admin.model.response.cliente.ContratoResponse;
 import com.escola.admin.service.cliente.ContratoService;
@@ -39,6 +40,15 @@ public class ContratoController {
     @PreAuthorize("isAuthenticated()")
     public Mono<String> saveContrato(@Argument ContratoRequest request) {
         return contratoService.save(request)
+                .then(Mono.just("Operação realizada com sucesso."))
+                .switchIfEmpty(Mono.error(new BaseException("Não foi possível salvar contrato. O serviço retornou um resultado vazio.")))
+                .onErrorResume(BaseException.class, Mono::error);
+    }
+
+    @MutationMapping
+    @PreAuthorize("isAuthenticated()")
+    public Mono<String> saveContratoModelo(@Argument ContratoModeloRequest request) {
+        return contratoService.saveModelo(request)
                 .then(Mono.just("Operação realizada com sucesso."))
                 .switchIfEmpty(Mono.error(new BaseException("Não foi possível salvar contrato. O serviço retornou um resultado vazio.")))
                 .onErrorResume(BaseException.class, Mono::error);

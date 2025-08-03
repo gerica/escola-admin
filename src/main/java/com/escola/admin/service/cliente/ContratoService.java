@@ -3,6 +3,7 @@ package com.escola.admin.service.cliente;
 
 import com.escola.admin.model.entity.auxiliar.Matricula;
 import com.escola.admin.model.entity.cliente.Contrato;
+import com.escola.admin.model.request.cliente.ContratoModeloRequest;
 import com.escola.admin.model.request.cliente.ContratoRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,8 @@ public interface ContratoService {
     String CHAVE_CONTRATO_MODELO_PADRAO = "CHAVE_CONTRATO_MODELO_PADRAO";
 
     Mono<Void> save(ContratoRequest request);
+
+    Mono<Void> saveModelo(ContratoModeloRequest request);
 
     Optional<Page<Contrato>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable);
 
