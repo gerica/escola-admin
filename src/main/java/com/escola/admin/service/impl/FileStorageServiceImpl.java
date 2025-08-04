@@ -62,6 +62,24 @@ public class FileStorageServiceImpl implements FileStorageService {
                 });
     }
 
+    @Override
+    public Mono<String> getFileAsBase64(String uuid) {
+        String QUERY_DOWNLOAD_FILE = """
+                 query FetchFileByUUID($uuid: String!) {
+                  fetchFileByUUID(uuid: $uuid)
+                }
+                """;
+        return graphQlClient.document(QUERY_DOWNLOAD_FILE)
+                .variables(Map.of("uuid", uuid))
+                .execute()
+                // Aplica a validação como um passo de transformação
+                .transform(this::validateGraphQlResponse)
+                .flatMap(clientGraphQlResponse -> {
+                    String result = clientGraphQlResponse.field("fetchFileByUUID").toEntity(String.class);
+                    return Mono.just(result);
+                });
+    }
+
     private Mono<ClientGraphQlResponse> validateGraphQlResponse(Mono<ClientGraphQlResponse> responseMono) {
         return responseMono.flatMap(response -> {
             if (!response.getErrors().isEmpty()) {

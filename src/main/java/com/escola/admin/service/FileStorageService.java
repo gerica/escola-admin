@@ -7,4 +7,6 @@ public interface FileStorageService {
     Mono<String> saveFile(String contentBase64);
 
     Mono<Boolean> deleteFile(String uuid);
+
+    Mono<String> getFileAsBase64(String uuid);
 }

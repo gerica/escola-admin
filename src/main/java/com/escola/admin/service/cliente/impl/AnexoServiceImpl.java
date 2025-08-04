@@ -4,6 +4,7 @@ import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.cliente.Anexo;
 import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.request.cliente.AnexoRequest;
+import com.escola.admin.model.response.cliente.AnexoBase64Response;
 import com.escola.admin.repository.cliente.AnexoRepository;
 import com.escola.admin.service.FileStorageService;
 import com.escola.admin.service.cliente.AnexoService;
@@ -128,6 +129,31 @@ public class AnexoServiceImpl implements AnexoService {
                 .then() // Retorna um Mono<Void> para indicar a conclusão da operação
                 .doOnSuccess(v -> log.info("Anexo e arquivo deletados com sucesso."))
                 .doOnError(e -> log.error("Falha ao deletar anexo: {}", e.getMessage(), e));
+    }
+
+    /**
+     * Busca um anexo pelo ID, faz o download do arquivo no sistema de armazenamento
+     * e retorna o conteúdo do arquivo como uma String Base64.
+     *
+     * @param id O ID do anexo.
+     * @return Um Mono com o conteúdo do arquivo em Base64.
+     */
+    @Override
+    public Mono<AnexoBase64Response> downloadAnexo(Long id) {
+        return Mono.fromCallable(() -> repository.findById(id).orElseThrow(() -> new BaseException("Anexo não encontrado.")))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(anexo -> {
+                    log.info("Iniciando download do anexo com ID: {} e UUID: {}", anexo.getId(), anexo.getUuid());
+                    return storageService.getFileAsBase64(anexo.getUuid())
+                            .flatMap(content -> {
+                                return Mono.just(AnexoBase64Response.builder()
+                                        .conteudoBase64(content)
+                                        .nomeArquivo(anexo.getNomeArquivo())
+                                        .build());
+                            });
+                })
+                .doOnSuccess(v -> log.info("Download do anexo concluído com sucesso."))
+                .doOnError(e -> log.error("Falha ao baixar anexo: {}", e.getMessage(), e));
     }
 
     private Throwable handleDataIntegrityViolation(DataIntegrityViolationException e) {

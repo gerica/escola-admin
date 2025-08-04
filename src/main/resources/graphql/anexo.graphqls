@@ -25,9 +25,15 @@ type AnexoResponsePage {
     empty: Boolean!
 }
 
+type  AnexoBase64Response{
+    nomeArquivo: String!
+    conteudoBase64: String
+}
+
 extend type Query {
     # Busca um curso pelo seu ID
     anexosDoContrato(idContrato: ID!): [AnexoResponse]
+    downloadAnexo(id: ID!): AnexoBase64Response!
 
 }
 

@@ -4,6 +4,7 @@ import com.escola.admin.controller.help.PageableHelp;
 import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.mapper.cliente.AnexoMapper;
 import com.escola.admin.model.request.cliente.AnexoRequest;
+import com.escola.admin.model.response.cliente.AnexoBase64Response;
 import com.escola.admin.model.response.cliente.AnexoResponse;
 import com.escola.admin.service.cliente.AnexoService;
 import graphql.GraphQLException;
@@ -52,6 +53,13 @@ public class AnexoController {
     public Mono<String> deleteAnexoById(@Argument Long id) {
         return anexoService.deleteById(id)
                 .then(Mono.just("Operação realizada com sucesso."))
+                .onErrorResume(e -> Mono.error(new GraphQLException("Falha realizar operação: " + e.getMessage())));
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    public Mono<AnexoBase64Response> downloadAnexo(@Argument Long id) {
+        return anexoService.downloadAnexo(id)
                 .onErrorResume(e -> Mono.error(new GraphQLException("Falha realizar operação: " + e.getMessage())));
     }
 

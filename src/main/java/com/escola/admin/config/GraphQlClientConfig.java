@@ -37,6 +37,8 @@ public class GraphQlClientConfig {
         WebClient webClient = webClientBuilder.clone()
                 .baseUrl(utilServiceUrl)
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
+                // Aumenta o buffer de memória para 10 MB, permitindo arquivos maiores
+                .codecs(codecs -> codecs.defaultCodecs().maxInMemorySize(10 * 1024 * 1024))
                 // Adicione o novo filtro de log ANTES do filtro de token
                 .filter(logRequestFilter())
                 .filter(tokenRelayFilter())
