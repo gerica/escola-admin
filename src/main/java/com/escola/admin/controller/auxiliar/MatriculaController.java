@@ -7,7 +7,6 @@ import com.escola.admin.model.mapper.auxiliar.MatriculaMapper;
 import com.escola.admin.model.request.auxiliar.MatriculaRequest;
 import com.escola.admin.model.response.auxiliar.MatriculaResponse;
 import com.escola.admin.service.auxiliar.MatriculaService;
-import graphql.GraphQLException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -98,6 +97,6 @@ public class MatriculaController {
     public Mono<String> deleteMatriculaById(@Argument Long id) {
         return matriculaService.deleteById(id)
                 .then(Mono.just("Operação realizada com sucesso."))
-                .onErrorResume(e -> Mono.error(new GraphQLException("Falha realizar operação: " + e.getMessage())));
+                .onErrorResume(BaseException.class, Mono::error);
     }
 }

@@ -80,12 +80,25 @@ public class GraphQlExceptionHandlerAdvice {
 
     /**
      * Handler genérico (fallback) para qualquer outra exceção não tratada.
-     * Isso garante que nunca vazemos stack traces ou detalhes internos para o cliente.
-     * Logamos o erro completo no servidor para depuração.
-     * Retorna um erro do tipo INTERNAL_ERROR.
+     * ANTES de tratar como um erro interno, ele verifica se a CAUSA da exceção
+     * é uma BaseException, delegando para o handler correto se for o caso.
      */
     @GraphQlExceptionHandler
     public GraphQLError handleGenericException(Exception ex, DataFetchingEnvironment env) {
+        // --- INÍCIO DA ALTERAÇÃO ROBUSTA ---
+        Throwable cause = ex;
+        // Loop para "desembrulhar" as exceções aninhadas
+        while (cause != null) {
+            if (cause instanceof BaseException baseException) {
+                // Encontramos nossa exceção de negócio! Delegamos para o handler correto.
+                return handleBaseException(baseException, env);
+            }
+            // Passa para a próxima causa na cadeia
+            cause = cause.getCause();
+        }
+        // --- FIM DA ALTERAÇÃO ROBUSTA ---
+
+        // Se não for, continua sendo um erro inesperado.
         // Loga a exceção completa no servidor para que a equipe de desenvolvimento possa investigar.
         log.error("Ocorreu um erro inesperado ao processar a requisição GraphQL", ex);
 

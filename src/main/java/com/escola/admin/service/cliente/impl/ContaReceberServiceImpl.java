@@ -35,12 +35,12 @@ import java.util.List;
 @Slf4j
 public class ContaReceberServiceImpl implements ContaReceberService {
 
-    // Constante para o contexto matemático dos cálculos BigDecimal
     private static final MathContext MATH_CONTEXT = new MathContext(10, RoundingMode.HALF_UP);
     ContaReceberRepository repository;
     ContaReceberMapper mapper;
     ContratoService contratoService;
 
+    // ... (métodos save, findById, findByFiltro, deleteById, delete permanecem os mesmos)
     @Override
     public Mono<ContaReceber> save(ContaReceberRequest request) {
         return validateRequest(request) // Passo 1: Valida a requisição de entrada
@@ -68,42 +68,6 @@ public class ContaReceberServiceImpl implements ContaReceberService {
     }
 
     @Override
-    public Mono<Void> criar(Long idContrato) {
-        return contratoService.findById(idContrato)
-                .switchIfEmpty(Mono.error(new BaseException("Contrato não encontrado para o ID: " + idContrato)))
-                .flatMap(contrato -> {
-                    log.info("Iniciando criação de contas a receber para o contrato ID: {}", contrato.getId());
-                    LocalDate dataInicioContrato = contrato.getDataInicio();
-                    LocalDate dataFimContrato = contrato.getDataFim();
-                    LocalDate hoje = LocalDate.now();
-                    BigDecimal valorTotalContrato = contrato.getValorTotal();
-
-                    List<ContaReceber> contasAReceber = new ArrayList<>();
-                    LocalDate dataProximaIteracao; // Renomeado para clareza
-
-                    // Lógica para calcular a primeira conta a receber (proporcional ou mensal)
-                    if (hoje.isAfter(dataInicioContrato)) {
-                        dataProximaIteracao = handleProportionalOrInitialBilling(contrato, contasAReceber, dataFimContrato, hoje, valorMensal);
-                        if (dataProximaIteracao == null) { // Indica que nenhuma conta foi criada (ex: hoje > dataFim)
-                            return Mono.empty();
-                        }
-                    } else {
-                        dataProximaIteracao = dataInicioContrato;
-                    }
-
-                    // Loop para criar as contas a receber para os meses restantes
-                    generateMonthlyContas(contrato, contasAReceber, dataProximaIteracao, dataFimContrato, valorMensal);
-
-                    // Persiste todas as contas a receber geradas
-                    return Flux.fromIterable(contasAReceber)
-                            .flatMap(this::persist)
-                            .then()
-                            .doOnSuccess(v -> log.info("Todas as contas a receber para o contrato ID {} foram criadas e salvas com sucesso.", contrato.getId()))
-                            .doOnError(e -> log.error("Erro ao persistir contas a receber para o contrato ID {}: {}", contrato.getId(), e.getMessage(), e));
-                });
-    }
-
-    @Override
     public Mono<Void> deleteById(Long id) {
         return Mono.fromRunnable(() -> repository.deleteById(id))
                 .subscribeOn(Schedulers.boundedElastic())
@@ -121,12 +85,136 @@ public class ContaReceberServiceImpl implements ContaReceberService {
                 .doOnError(e -> log.error("Erro ao excluir conta a receber {}: {}", entity.getId(), e.getMessage(), e));
     }
 
+    // --- MÉTODO PRINCIPAL REATORADO ---
+
+    @Override
+    public Mono<Void> criar(Long idContrato) {
+        return contratoService.findById(idContrato)
+                .switchIfEmpty(Mono.error(new BaseException("Contrato não encontrado para o ID: " + idContrato)))
+                .flatMap(contrato -> {
+                    log.info("Iniciando processo de geração de parcelas para o contrato ID: {}", contrato.getId());
+
+                    long duracaoEmMeses = calcularDuracaoEmMeses(contrato);
+                    if (duracaoEmMeses <= 0) {
+                        log.warn("Duração do contrato é zero ou negativa. Nenhuma conta será gerada.");
+                        return Mono.empty();
+                    }
+
+                    BigDecimal valorMensalPadrao = calcularValorMensalPadrao(contrato, duracaoEmMeses);
+                    List<ContaReceber> parcelas = gerarParcelas(contrato, valorMensalPadrao);
+
+                    if (parcelas.isEmpty()) {
+                        log.warn("Nenhuma parcela foi gerada para o contrato ID: {}. Verifique as datas.", contrato.getId());
+                        return Mono.empty();
+                    }
+
+                    ajustarUltimaParcela(parcelas, contrato.getValorTotal());
+
+                    return persistirParcelas(parcelas, contrato.getId());
+                });
+    }
+
+    // --- MÉTODOS AUXILIARES PRIVADOS ---
+
     /**
-     * Valida a requisição de ContaReceber.
-     *
-     * @param request A requisição de ContaReceber.
-     * @return Mono<Void> indicando sucesso ou erro.
+     * Calcula a duração total do contrato em meses.
      */
+    private long calcularDuracaoEmMeses(Contrato contrato) {
+        // Adiciona 1 dia para incluir o mês final por completo no cálculo.
+        return ChronoUnit.MONTHS.between(
+                contrato.getDataInicio().withDayOfMonth(1),
+                contrato.getDataFim().withDayOfMonth(1)
+        ) + 1;
+    }
+
+    /**
+     * Calcula o valor da mensalidade padrão dividindo o valor total pela duração.
+     */
+    private BigDecimal calcularValorMensalPadrao(Contrato contrato, long duracaoEmMeses) {
+        BigDecimal valorTotal = contrato.getValorTotal();
+        BigDecimal duracao = BigDecimal.valueOf(duracaoEmMeses);
+        BigDecimal valorMensal = valorTotal.divide(duracao, MATH_CONTEXT);
+        log.info("Valor mensal padrão calculado: {}", valorMensal);
+        return valorMensal;
+    }
+
+    /**
+     * Gera a lista de todas as parcelas (Contas a Receber), tratando a proporcionalidade da primeira.
+     */
+    private List<ContaReceber> gerarParcelas(Contrato contrato, BigDecimal valorMensalPadrao) {
+        List<ContaReceber> parcelas = new ArrayList<>();
+        LocalDate hoje = LocalDate.now();
+        LocalDate dataInicioContrato = contrato.getDataInicio();
+        LocalDate dataFimContrato = contrato.getDataFim();
+
+        // A geração começa em 'hoje' ou na data de início do contrato, o que for mais tarde.
+        LocalDate dataIteracao = hoje.isAfter(dataInicioContrato) ? hoje : dataInicioContrato;
+
+        while (!dataIteracao.isAfter(dataFimContrato)) {
+            BigDecimal valorParcela;
+            LocalDate dataVencimento = dataIteracao.with(TemporalAdjusters.lastDayOfMonth());
+
+            // Lógica para cálculo proporcional da primeira parcela
+            if (dataIteracao.equals(hoje) && hoje.isAfter(dataInicioContrato) && hoje.getDayOfMonth() > 1) {
+                BigDecimal diasNoMes = BigDecimal.valueOf(dataIteracao.lengthOfMonth());
+                BigDecimal diasRestantes = BigDecimal.valueOf(dataVencimento.getDayOfMonth() - dataIteracao.getDayOfMonth() + 1);
+                valorParcela = valorMensalPadrao.multiply(diasRestantes, MATH_CONTEXT).divide(diasNoMes, MATH_CONTEXT);
+                log.info("Gerando primeira parcela proporcional. Venc: {}, Valor: {}", dataVencimento, valorParcela);
+            } else {
+                valorParcela = valorMensalPadrao;
+                log.info("Gerando parcela mensal cheia. Venc: {}, Valor: {}", dataVencimento, valorParcela);
+            }
+
+            // Garante que a data de vencimento não ultrapasse o fim do contrato
+            if (dataVencimento.isAfter(dataFimContrato)) {
+                dataVencimento = dataFimContrato;
+            }
+
+            ContaReceber conta = new ContaReceber();
+            conta.setStatus(StatusContaReceber.ABERTA);
+            conta.setContrato(contrato);
+            conta.setDesconto(contrato.getDesconto());
+            conta.setDataVencimento(dataVencimento);
+            conta.setValorTotal(valorParcela.setScale(2, RoundingMode.HALF_UP));
+            parcelas.add(conta);
+
+            // Avança para o primeiro dia do próximo mês
+            dataIteracao = dataIteracao.plusMonths(1).withDayOfMonth(1);
+        }
+        return parcelas;
+    }
+
+    /**
+     * Ajusta o valor da última parcela para corrigir diferenças de arredondamento,
+     * garantindo que a soma das parcelas seja exatamente o valor total do contrato.
+     */
+    private void ajustarUltimaParcela(List<ContaReceber> parcelas, BigDecimal valorTotalContrato) {
+        BigDecimal somaDasParcelas = parcelas.stream()
+                .map(ContaReceber::getValorTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal diferenca = valorTotalContrato.subtract(somaDasParcelas);
+
+        if (diferenca.compareTo(BigDecimal.ZERO) != 0) {
+            log.info("Ajustando última parcela em {} para bater com o valor total do contrato.", diferenca);
+            ContaReceber ultimaConta = parcelas.get(parcelas.size() - 1);
+            BigDecimal novoValor = ultimaConta.getValorTotal().add(diferenca);
+            ultimaConta.setValorTotal(novoValor.setScale(2, RoundingMode.HALF_UP));
+        }
+    }
+
+    /**
+     * Persiste a lista de parcelas no banco de dados de forma reativa.
+     */
+    private Mono<Void> persistirParcelas(List<ContaReceber> parcelas, Long idContrato) {
+        return Flux.fromIterable(parcelas)
+                .flatMap(this::persist)
+                .then()
+                .doOnSuccess(v -> log.info("Todas as {} contas a receber para o contrato ID {} foram criadas e salvas.", parcelas.size(), idContrato))
+                .doOnError(e -> log.error("Erro ao persistir contas a receber para o contrato ID {}: {}", idContrato, e.getMessage(), e));
+    }
+
+    // --- MÉTODOS PRIVADOS EXISTENTES ---
     private Mono<Void> validateRequest(ContaReceberRequest request) {
         if (request.idContrato() == null) {
             return Mono.error(new BaseException("O ID do contrato é obrigatório."));
@@ -134,23 +222,10 @@ public class ContaReceberServiceImpl implements ContaReceberService {
         return Mono.empty();
     }
 
-    /**
-     * Busca as entidades necessárias (Contrato) para a requisição.
-     *
-     * @param request A requisição de ContaReceber.
-     * @return Mono<Contrato> com o contrato encontrado.
-     */
     private Mono<Contrato> getRequiredEntities(ContaReceberRequest request) {
         return contratoService.findById(request.idContrato());
     }
 
-    /**
-     * Atualiza uma ContaReceber existente ou cria uma nova.
-     *
-     * @param request  A requisição de ContaReceber.
-     * @param contrato O contrato associado.
-     * @return Mono<ContaReceber> com a entidade atualizada ou criada.
-     */
     private Mono<ContaReceber> updateOrCreate(ContaReceberRequest request, Contrato contrato) {
         return Mono.justOrEmpty(request.id())
                 .flatMap(this::findById)
@@ -167,300 +242,13 @@ public class ContaReceberServiceImpl implements ContaReceberService {
                 }));
     }
 
-    /**
-     * Persiste uma entidade ContaReceber no repositório.
-     *
-     * @param entity A entidade ContaReceber a ser persistida.
-     * @return Mono<ContaReceber> com a entidade salva.
-     */
     private Mono<ContaReceber> persist(ContaReceber entity) {
         return Mono.fromCallable(() -> repository.save(entity)).subscribeOn(Schedulers.boundedElastic());
     }
 
-    /**
-     * Trata exceções de violação de integridade de dados.
-     *
-     * @param e A exceção DataIntegrityViolationException.
-     * @return Uma nova BaseException com uma mensagem de erro amigável.
-     */
     private Throwable handleDataIntegrityViolation(DataIntegrityViolationException e) {
         log.warn("Violação de integridade de dados ao salvar conta a receber: {}", e.getMessage());
         String errorMessage = "Erro de integridade de dados ao salvar o conta a receber.";
         return new BaseException(errorMessage, e);
-    }
-
-    /**
-     * Lida com a criação da primeira conta a receber, que pode ser proporcional
-     * se a data atual for posterior à data de início do contrato.
-     *
-     * @param contrato        O contrato.
-     * @param contasAReceber  A lista de contas a receber a ser preenchida.     *
-     * @param dataFimContrato A data de fim do contrato.
-     * @param hoje            A data atual.
-     * @param valorMensal     O valor mensal padrão.
-     * @return A data de início para a próxima iteração de meses completos, ou null se nenhuma conta for gerada.
-     */
-    private LocalDate handleProportionalOrInitialBilling(
-            Contrato contrato,
-            List<ContaReceber> contasAReceber,
-            LocalDate dataFimContrato,
-            LocalDate hoje,
-            BigDecimal valorMensal) {
-
-        if (hoje.isBefore(dataFimContrato) || hoje.isEqual(dataFimContrato)) {
-            LocalDate dataVencimentoProporcional = hoje.with(TemporalAdjusters.lastDayOfMonth());
-            BigDecimal diasNoMes = BigDecimal.valueOf(hoje.lengthOfMonth());
-            BigDecimal diasRestantes = BigDecimal.valueOf(dataVencimentoProporcional.getDayOfMonth() - hoje.getDayOfMonth() + 1);
-
-            BigDecimal valorDiario = valorMensal.divide(diasNoMes, MATH_CONTEXT);
-            BigDecimal valorProporcional = valorDiario.multiply(diasRestantes, MATH_CONTEXT);
-
-            ContaReceber contaProporcional = new ContaReceber();
-            contaProporcional.setStatus(StatusContaReceber.ABERTA);
-            contaProporcional.setContrato(contrato);
-            contaProporcional.setDesconto(contrato.getDesconto());
-            contaProporcional.setDataVencimento(dataVencimentoProporcional);
-            contaProporcional.setValorTotal(valorProporcional.setScale(2, RoundingMode.HALF_UP));
-            contasAReceber.add(contaProporcional);
-            log.info("Conta proporcional criada: Vencimento {}, Valor {}", dataVencimentoProporcional, valorProporcional);
-
-            return hoje.plusMonths(1).withDayOfMonth(1);
-        } else {
-            log.warn("Data atual {} já é posterior à data fim do contrato {}. Nenhuma conta a receber será criada.", hoje, dataFimContrato);
-            return null; // Indica que não há mais contas a serem criadas
-        }
-    }
-
-    /**
-     * Gera e adiciona as contas a receber mensais à lista.
-     *
-     * @param contrato        O contrato.
-     * @param contasAReceber  A lista de contas a receber a ser preenchida.
-     * @param dataIteracao    A data de início para a geração das contas mensais.
-     * @param dataFimContrato A data de fim do contrato.
-     * @param valorMensal     O valor mensal padrão.
-     */
-    private void generateMonthlyContas(
-            Contrato contrato,
-            List<ContaReceber> contasAReceber,
-            LocalDate dataIteracao,
-            LocalDate dataFimContrato,
-            BigDecimal valorMensal) {
-
-        while (dataIteracao.isBefore(dataFimContrato.plusDays(1))) {
-            LocalDate dataVencimento = dataIteracao.with(TemporalAdjusters.lastDayOfMonth());
-
-            if (dataVencimento.isAfter(dataFimContrato)) {
-                dataVencimento = dataFimContrato;
-            }
-
-            if (dataIteracao.isAfter(dataFimContrato)) {
-                break;
-            }
-
-            ContaReceber conta = new ContaReceber();
-            conta.setStatus(StatusContaReceber.ABERTA);
-            conta.setContrato(contrato);
-            conta.setDataVencimento(dataVencimento);
-            conta.setDesconto(contrato.getDesconto());
-            conta.setValorTotal(valorMensal.setScale(2, RoundingMode.HALF_UP));
-            contasAReceber.add(conta);
-            log.info("Conta mensal criada: Vencimento {}, Valor {}", dataVencimento, valorMensal);
-
-            dataIteracao = dataIteracao.plusMonths(1).withDayOfMonth(1);
-        }
-    }
-
-
-    private long getDucacaoEmMes(LocalDate dataInicioContrato, LocalDate dataFimContrato) {
-        // 1. Calcular a duração total do contrato em meses. Adiciona 1 dia para incluir o mês final por completo.
-        return ChronoUnit.MONTHS.between(
-                dataInicioContrato.withDayOfMonth(1),
-                dataFimContrato.withDayOfMonth(1)
-        ) + 1;
-    }
-
-    public Mono<Void> criar2(Long idContrato) {
-        return contratoService.findById(idContrato)
-                // Se o contrato não for encontrado, emite um erro
-                .switchIfEmpty(Mono.error(new BaseException("Contrato não encontrado para o ID: " + idContrato)))
-                .flatMap(contrato -> {
-                    log.info("Iniciando criação de contas a receber para o contrato ID: {}", contrato.getId());
-                    LocalDate dataInicioContrato = contrato.getDataInicio();
-                    LocalDate dataFimContrato = contrato.getDataFim();
-                    LocalDate hoje = LocalDate.now();
-
-                    List<ContaReceber> contasAReceber = new ArrayList<>();
-                    LocalDate dataIteracao;
-
-                    // TODO: Definir como o valor mensal será obtido.
-                    // Para o exemplo, usaremos um valor fixo. Você deve buscar ou calcular este valor
-                    // com base nas regras de negócio do seu sistema (ex: de um campo no Contrato).
-                    // Agora usando BigDecimal para valorMensal
-                    BigDecimal valorMensal = new BigDecimal("500.00"); // Exemplo de valor mensal
-
-                    // Lógica para calcular a primeira conta a receber proporcionalmente
-                    // se a data atual for posterior à data de início do contrato.
-                    if (hoje.isAfter(dataInicioContrato)) {
-                        // Verifica se a data atual ainda está dentro do período do contrato (ou no último dia)
-                        if (hoje.isBefore(dataFimContrato) || hoje.isEqual(dataFimContrato)) {
-                            // Calcula a data de vencimento para o último dia do mês atual
-                            LocalDate dataVencimentoProporcional = hoje.with(TemporalAdjusters.lastDayOfMonth());
-                            BigDecimal diasNoMes = BigDecimal.valueOf(hoje.lengthOfMonth());
-                            // Calcula os dias restantes no mês, incluindo o dia atual
-                            BigDecimal diasRestantes = BigDecimal.valueOf(dataVencimentoProporcional.getDayOfMonth() - hoje.getDayOfMonth() + 1);
-
-                            // Usando BigDecimal para o cálculo proporcional
-                            // Definindo um MathContext para precisão e RoundingMode para arredondamento
-                            MathContext mc = new MathContext(10, RoundingMode.HALF_UP); // 10 casas de precisão, arredondamento para cima
-
-                            BigDecimal valorDiario = valorMensal.divide(diasNoMes, mc);
-                            BigDecimal valorProporcional = valorDiario.multiply(diasRestantes, mc);
-
-                            ContaReceber contaProporcional = new ContaReceber();
-                            contaProporcional.setContrato(contrato);
-                            contaProporcional.setDataVencimento(dataVencimentoProporcional);
-                            // Atribui o BigDecimal diretamente, sem converter para double
-                            contaProporcional.setValorTotal(valorProporcional.setScale(2, RoundingMode.HALF_UP));
-                            contasAReceber.add(contaProporcional);
-                            log.info("Conta proporcional criada: Vencimento {}, Valor {}", dataVencimentoProporcional, valorProporcional);
-
-                            // A próxima iteração de mês cheio começa no primeiro dia do próximo mês
-                            dataIteracao = hoje.plusMonths(1).withDayOfMonth(1);
-                        } else {
-                            // Se hoje já passou da data fim do contrato, não há contas a criar a partir de hoje
-                            log.warn("Data atual {} já é posterior à data fim do contrato {}. Nenhuma conta a receber será criada.", hoje, dataFimContrato);
-                            return Mono.empty(); // Retorna um Mono vazio, indicando que nenhuma conta foi criada
-                        }
-                    } else {
-                        // Se a data atual for igual ou anterior à data de início do contrato,
-                        // a iteração começa a partir da data de início do contrato.
-                        dataIteracao = dataInicioContrato;
-                    }
-
-                    // Loop para criar as contas a receber para os meses restantes até a data final do contrato
-                    // A condição `isBefore(dataFimContrato.plusDays(1))` garante que o mês da dataFimContrato seja incluído.
-                    while (dataIteracao.isBefore(dataFimContrato.plusDays(1))) {
-                        LocalDate dataVencimento = dataIteracao.with(TemporalAdjusters.lastDayOfMonth());
-
-                        // Ajusta a data de vencimento para não ultrapassar a dataFimContrato
-                        if (dataVencimento.isAfter(dataFimContrato)) {
-                            dataVencimento = dataFimContrato;
-                        }
-
-                        // Se a data de iteração já passou da data fim do contrato, para o loop
-                        // (Essa condição é uma segurança extra, a condição do while já deveria cobrir)
-                        if (dataIteracao.isAfter(dataFimContrato)) {
-                            break;
-                        }
-
-                        ContaReceber conta = new ContaReceber();
-                        conta.setContrato(contrato);
-                        conta.setDataVencimento(dataVencimento);
-                        // Atribui o BigDecimal diretamente, sem converter para double
-                        conta.setValorTotal(valorMensal.setScale(2, RoundingMode.HALF_UP));
-                        contasAReceber.add(conta);
-                        log.info("Conta mensal criada: Vencimento {}, Valor {}", dataVencimento, valorMensal);
-
-                        // Avança para o primeiro dia do próximo mês
-                        dataIteracao = dataIteracao.plusMonths(1).withDayOfMonth(1);
-                    }
-
-                    // Persiste todas as contas a receber geradas usando Flux para processamento reativo
-                    return Flux.fromIterable(contasAReceber)
-                            .flatMap(this::persist) // Para cada ContaReceber, chama o método persist
-                            .then() // Converte o Flux de volta para um Mono<Void> após todas as operações
-                            .doOnSuccess(v -> log.info("Todas as contas a receber para o contrato ID {} foram criadas e salvas com sucesso.", contrato.getId()))
-                            .doOnError(e -> log.error("Erro ao persistir contas a receber para o contrato ID {}: {}", contrato.getId(), e.getMessage(), e));
-                });
-    }
-
-
-    public Mono<Void> criar3(Long idContrato) {
-        return contratoService.findById(idContrato)
-                .switchIfEmpty(Mono.error(new BaseException("Contrato não encontrado para o ID: " + idContrato)))
-                .flatMap(contrato -> {
-                    log.info("Iniciando criação de contas a receber para o contrato ID: {}", contrato.getId());
-
-                    LocalDate dataInicioContrato = contrato.getDataInicio();
-                    LocalDate dataFimContrato = contrato.getDataFim();
-                    BigDecimal valorTotalContrato = contrato.getValorTotal();
-
-                    // 1. Calcular a duração total do contrato em meses. Adiciona 1 dia para incluir o mês final por completo.
-                    long duracaoEmMeses = getDucacaoEmMes(dataInicioContrato, dataFimContrato);
-
-                    if (duracaoEmMeses <= 0) {
-                        log.warn("Duração do contrato é zero ou negativa. Nenhuma conta será gerada.");
-                        return Mono.empty();
-                    }
-
-                    // 2. Calcular o valor mensal padrão
-                    BigDecimal valorMensalPadrao = valorTotalContrato.divide(BigDecimal.valueOf(duracaoEmMeses), MATH_CONTEXT);
-                    log.info("Valor mensal padrão calculado: {}", valorMensalPadrao);
-
-                    List<ContaReceber> contasAReceber = new ArrayList<>();
-                    LocalDate hoje = LocalDate.now();
-
-                    // Define a data de início para a geração das parcelas.
-                    // Se 'hoje' for depois do início do contrato, começa a gerar a partir de 'hoje'.
-                    LocalDate dataIteracao = hoje.isAfter(dataInicioContrato) ? hoje : dataInicioContrato;
-
-                    // 3. Loop para gerar as parcelas
-                    while (dataIteracao.isBefore(dataFimContrato) || dataIteracao.isEqual(dataFimContrato)) {
-                        BigDecimal valorParcela;
-                        LocalDate dataVencimento = dataIteracao.with(TemporalAdjusters.lastDayOfMonth());
-
-                        // Se for o primeiro mês E for um mês parcial (começou depois do dia 1)
-                        if (dataIteracao.equals(hoje) && hoje.isAfter(dataInicioContrato) && hoje.getDayOfMonth() > 1) {
-                            // Lógica para o cálculo proporcional
-                            BigDecimal diasNoMes = BigDecimal.valueOf(dataIteracao.lengthOfMonth());
-                            BigDecimal diasRestantes = BigDecimal.valueOf(dataVencimento.getDayOfMonth() - dataIteracao.getDayOfMonth() + 1);
-                            valorParcela = valorMensalPadrao.multiply(diasRestantes, MATH_CONTEXT).divide(diasNoMes, MATH_CONTEXT);
-                            log.info("Gerando primeira parcela proporcional. Venc: {}, Valor: {}", dataVencimento, valorParcela);
-                        } else {
-                            // Parcela com valor mensal cheio
-                            valorParcela = valorMensalPadrao;
-                            log.info("Gerando parcela mensal cheia. Venc: {}, Valor: {}", dataVencimento, valorParcela);
-                        }
-
-                        // Garante que a data de vencimento não ultrapasse o fim do contrato
-                        if (dataVencimento.isAfter(dataFimContrato)) {
-                            dataVencimento = dataFimContrato;
-                        }
-
-                        ContaReceber conta = new ContaReceber();
-                        conta.setStatus(StatusContaReceber.ABERTA);
-                        conta.setContrato(contrato);
-                        conta.setDesconto(contrato.getDesconto()); // Pode ser ajustado se o desconto for por parcela
-                        conta.setDataVencimento(dataVencimento);
-                        conta.setValorTotal(valorParcela.setScale(2, RoundingMode.HALF_UP));
-                        contasAReceber.add(conta);
-
-                        // Avança para o primeiro dia do próximo mês para a próxima iteração
-                        dataIteracao = dataIteracao.plusMonths(1).withDayOfMonth(1);
-                    }
-
-                    // 4. Ajuste final para garantir que a soma das parcelas seja igual ao valor total do contrato
-                    if (!contasAReceber.isEmpty()) {
-                        BigDecimal somaDasParcelas = contasAReceber.stream()
-                                .map(ContaReceber::getValorTotal)
-                                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-                        BigDecimal diferenca = valorTotalContrato.subtract(somaDasParcelas);
-
-                        if (diferenca.compareTo(BigDecimal.ZERO) != 0) {
-                            log.info("Ajustando última parcela em {} para bater com o valor total do contrato.", diferenca);
-                            ContaReceber ultimaConta = contasAReceber.get(contasAReceber.size() - 1);
-                            ultimaConta.setValorTotal(ultimaConta.getValorTotal().add(diferenca).setScale(2, RoundingMode.HALF_UP));
-                        }
-                    }
-
-                    // 5. Persiste todas as contas a receber geradas
-                    return Flux.fromIterable(contasAReceber)
-                            .flatMap(this::persist)
-                            .then()
-                            .doOnSuccess(v -> log.info("Todas as {} contas a receber para o contrato ID {} foram criadas e salvas.", contasAReceber.size(), contrato.getId()))
-                            .doOnError(e -> log.error("Erro ao persistir contas a receber para o contrato ID {}: {}", contrato.getId(), e.getMessage(), e));
-                });
     }
 }

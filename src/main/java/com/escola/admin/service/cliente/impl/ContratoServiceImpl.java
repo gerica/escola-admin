@@ -80,7 +80,6 @@ public class ContratoServiceImpl implements ContratoService {
     }
 
     BigDecimal getValorTotalCalculado(Curso cursoAssociado, LocalDate dtInicio, LocalDate dataFim) {
-        BigDecimal valorTotalCalculado;
         long numeroDeMeses = ChronoUnit.MONTHS.between(dtInicio, dataFim);
 
         // Garante que o número de meses seja no mínimo 1, caso as datas sejam no mesmo mês.
@@ -89,7 +88,7 @@ public class ContratoServiceImpl implements ContratoService {
             numeroDeMeses = 1;
         }
 
-        return valorTotalCalculado = cursoAssociado.getValorMensalidade()
+        return cursoAssociado.getValorMensalidade()
                 .multiply(BigDecimal.valueOf(numeroDeMeses))
                 .setScale(2, RoundingMode.HALF_UP);
     }

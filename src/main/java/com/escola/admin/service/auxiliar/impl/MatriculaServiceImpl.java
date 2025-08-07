@@ -259,6 +259,14 @@ public class MatriculaServiceImpl implements MatriculaService {
             if (errorMessage.contains("uc_matricula_turma_dependente")) {
                 return new BaseException("Já existe uma matrícula para este dependente nesta turma.", e);
             }
+            if (errorMessage.contains("violates foreign key constraint")) {
+                if (errorMessage.contains("table \"tb_conta_receber\"")) {
+                    return new BaseException("Existe contas a receber relacionado a essa matrícula, não é possível excluir essa matrícula.", e);
+                }
+                return new BaseException("Essa matrícula não pode ser excluída, ela tem relacionamento com outra entidade no sistema.", e);
+            }
+
+
         }
         return new BaseException("Erro de integridade de dados ao salvar a matrícula.", e);
     }
@@ -322,6 +330,7 @@ public class MatriculaServiceImpl implements MatriculaService {
                 .then(Mono.fromRunnable(() -> repository.deleteById(id))) // 2. Apaga a matrícula, encapsulando a chamada bloqueante.
                 .doOnSuccess(v -> log.info("Matricula com ID {} e contratos relacionados excluídos com sucesso.", id))
                 .doOnError(e -> log.error("Erro ao excluir matricula por ID {}: {}", id, e.getMessage(), e))
+                .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
                 .then(); // Garante o retorno de um Mono<Void> final
     }
 
