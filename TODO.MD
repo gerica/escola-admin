@@ -15,3 +15,10 @@ Tabelas auxiliares
 
 
 
+### Módulo Financeiro Básico:
+
+( ) Contas a Receber: 
+    Geração de boletos/faturas, controle de mensalidades, acompanhamento de pagamentos em atraso, registro de recebimentos.
+( ) Contas a Pagar: Registro de despesas (aluguel, salários, materiais), agendamento de pagamentos.
+( ) Fluxo de Caixa: Visão simplificada das entradas e saídas.
+( ) Relatórios Financeiros Básicos: Resumo de receitas e despesas.

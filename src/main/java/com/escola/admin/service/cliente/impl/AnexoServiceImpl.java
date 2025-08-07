@@ -21,7 +21,7 @@ import reactor.core.scheduler.Schedulers;
 import java.util.Collections;
 import java.util.List;
 
-@Service()
+@Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
 @Slf4j

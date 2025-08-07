@@ -1,0 +1,45 @@
+input ContaReceberRequest{
+    id: ID
+    idContrato: ID!
+    valorTotal: BigDecimal
+    desconto: BigDecimal
+    valorPago: BigDecimal
+    dataVencimento: Date
+    dataPagamento: Date
+    observacoes: String
+}
+
+# Define o tipo Anexo que será retornado pelas queries
+type ContaReceberResponse {
+    id: ID
+    valorTotal: BigDecimal
+    desconto: BigDecimal
+    valorPago: BigDecimal
+    dataVencimento: Date
+    dataPagamento: Date
+    observacoes: String
+}
+
+# Define a estrutura de uma página de Anexos
+type ContaReceberResponsePage {
+    content: [ContaReceberResponse!]!
+    totalPages: Int!
+    totalElements: Long!
+    number: Int! # Número da página atual
+    size: Int! # Tamanho da página
+    first: Boolean!
+    last: Boolean!
+    empty: Boolean!
+}
+
+extend type Query {
+    fetchAllContasReceber(idContrato: ID!): [ContaReceberResponse]!
+    fetchByIdContaReceber(id: ID): ContaReceberResponse!
+}
+
+extend type Mutation {
+    criarContasReceber(idContrato: ID!):String!
+    saveContaReceber(request: ContaReceberRequest!): String!
+    apagarContaReceber(id: ID!): String!
+
+}
