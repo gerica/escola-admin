@@ -12,7 +12,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Data // Gera getters, setters, toString, equals e hashCode
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode(of = "id") // 2. Equals e HashCode baseados apenas no ID (mais seguro para entidades)
 @NoArgsConstructor // Gera construtor sem argumentos
 @AllArgsConstructor // Gera construtor com todos os argumentos
 @Entity // Marca a classe como uma entidade JPA

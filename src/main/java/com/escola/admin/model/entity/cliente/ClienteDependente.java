@@ -10,7 +10,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode(of = "id") // 2. Equals e HashCode baseados apenas no ID (mais seguro para entidades)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

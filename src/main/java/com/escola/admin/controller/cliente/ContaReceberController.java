@@ -60,7 +60,7 @@ public class ContaReceberController {
         return service.findById(id).map(mapper::toResponse);
     }
 
-    @QueryMapping
+    @MutationMapping
     @PreAuthorize("hasAnyAuthority('FINANCEIRO', 'ADMIN_EMPRESA')")
     public Mono<String> apagarContaReceber(@Argument Long id) {
         return service.deleteById(id)

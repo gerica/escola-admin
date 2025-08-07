@@ -3,6 +3,7 @@ input ContaReceberRequest{
     idContrato: ID!
     valorTotal: BigDecimal
     desconto: BigDecimal
+    status: StatusContaReceber
     valorPago: BigDecimal
     dataVencimento: Date
     dataPagamento: Date
@@ -14,10 +15,13 @@ type ContaReceberResponse {
     id: ID
     valorTotal: BigDecimal
     desconto: BigDecimal
+    status: StatusContaReceber
     valorPago: BigDecimal
     dataVencimento: Date
     dataPagamento: Date
     observacoes: String
+    dataCadastro: Date
+    dataAtualizaca: Date
 }
 
 # Define a estrutura de uma página de Anexos

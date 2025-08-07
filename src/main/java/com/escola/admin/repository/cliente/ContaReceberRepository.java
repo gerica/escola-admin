@@ -14,7 +14,8 @@ import java.util.Optional;
 public interface ContaReceberRepository extends JpaRepository<ContaReceber, Long> {
 
     @Query(value = "SELECT e FROM ContaReceber e " +
-            " WHERE e.contrato.id = :idContrato ")
+            " WHERE e.contrato.id = :idContrato " +
+            " ORDER BY e.dataVencimento asc")
     @QueryHints(value = {
             @QueryHint(name = "javax.persistence.query.timeout", value = "5000"),
             @QueryHint(name = "jakarta.persistence.cache.retrieveMode", value = "USE"), //USE, BYPASS, REFRESH

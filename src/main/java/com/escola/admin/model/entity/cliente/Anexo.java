@@ -8,7 +8,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
-@Data // Gera getters, setters, toString, equals e hashCode
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode(of = "id") // 2. Equals e HashCode baseados apenas no ID (mais seguro para entidades)
 @Builder // Gera construtor de builder para criação fluente de objetos
 @NoArgsConstructor // Gera construtor sem argumentos
 @AllArgsConstructor // Gera construtor com todos os argumentos

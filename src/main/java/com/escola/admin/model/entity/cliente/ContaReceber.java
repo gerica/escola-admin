@@ -10,13 +10,16 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Data // Gera getters, setters, toString, equals e hashCode
-@Builder // Gera construtor de builder para criação fluente de objetos
-@NoArgsConstructor // Gera construtor sem argumentos
-@AllArgsConstructor // Gera construtor com todos os argumentos
-@Entity // Marca a classe como uma entidade JPA
-@Table(name = "tb_conta_receber") // Mapeia a classe para a tabela "tb_cliente" no banco de dados
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = false) // Todos os campos privados e não finais
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode(of = "id") // 2. Equals e HashCode baseados apenas no ID (mais seguro para entidades)
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "tb_conta_receber")
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class ContaReceber {
 
     @Id // Marca o campo como chave primária
@@ -27,6 +30,11 @@ public class ContaReceber {
     @JoinColumn(name = "id_contrato", nullable = false)
     @ToString.Exclude
     Contrato contrato;
+
+    // 3. Adicionamos o campo de status
+    @Enumerated(EnumType.STRING) // Mapeia o Enum pelo nome ("ABERTA", "PAGA", etc.), que é mais robusto
+    @Column(name = "status", nullable = false)
+    StatusContaReceber status;
 
     @Column(name = "valor_total", nullable = false, precision = 10, scale = 2)
     BigDecimal valorTotal; // BigDecimal é ideal para valores monetários
@@ -55,15 +63,4 @@ public class ContaReceber {
     @Column(name = "data_atualizacao", nullable = false)
     LocalDateTime dataAtualizacao;
 
-    // Métodos de callback JPA para gerenciar datas de criação e atualização
-    @PrePersist
-    protected void onCreate() {
-        dataCadastro = LocalDateTime.now();
-        dataAtualizacao = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        dataAtualizacao = LocalDateTime.now();
-    }
 }

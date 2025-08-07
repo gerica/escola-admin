@@ -1,5 +1,6 @@
 package com.escola.admin.model.request.cliente;
 
+import com.escola.admin.model.entity.cliente.StatusContaReceber;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
@@ -23,6 +24,7 @@ public record ContaReceberRequest(
         @FutureOrPresent(message = "A data de vencimento não pode ser passada.")
         LocalDate dataVencimento,
         LocalDate dataPagamento,
+        StatusContaReceber status,
         String observacoes
 ) {
 }
