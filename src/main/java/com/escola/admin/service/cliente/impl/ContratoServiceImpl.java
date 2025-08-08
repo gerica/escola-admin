@@ -79,18 +79,67 @@ public class ContratoServiceImpl implements ContratoService {
                 .build();
     }
 
-    BigDecimal getValorTotalCalculado(Curso cursoAssociado, LocalDate dtInicio, LocalDate dataFim) {
-        long numeroDeMeses = ChronoUnit.MONTHS.between(dtInicio, dataFim);
+    // Dentro da classe ContratoServiceImpl.java
 
-        // Garante que o número de meses seja no mínimo 1, caso as datas sejam no mesmo mês.
-        // Isso evita um valor total de zero em contratos de um mês.
-        if (numeroDeMeses == 0) {
-            numeroDeMeses = 1;
+    /**
+     * Calcula o valor total do contrato de forma precisa, considerando a proporcionalidade
+     * dos dias no primeiro e no último mês.
+     *
+     * @param cursoAssociado O curso que define o valor da mensalidade base.
+     * @param dtInicio       A data de início efetiva do contrato.
+     * @param dataFim        A data de término do contrato.
+     * @return O valor total calculado para o período.
+     */
+    BigDecimal getValorTotalCalculado(Curso cursoAssociado, LocalDate dtInicio, LocalDate dataFim) {
+        BigDecimal valorMensalidade = cursoAssociado.getValorMensalidade();
+
+        // Caso 1: O contrato começa e termina no mesmo mês.
+        if (dtInicio.getYear() == dataFim.getYear() && dtInicio.getMonth() == dataFim.getMonth()) {
+            long diasNoPeriodo = ChronoUnit.DAYS.between(dtInicio, dataFim) + 1;
+            long diasTotalNoMes = dtInicio.lengthOfMonth();
+
+            log.info("Cálculo para contrato no mesmo mês. Dias no período: {}, Dias no mês: {}", diasNoPeriodo, diasTotalNoMes);
+
+            return valorMensalidade
+                    .multiply(BigDecimal.valueOf(diasNoPeriodo))
+                    .divide(BigDecimal.valueOf(diasTotalNoMes), 2, RoundingMode.HALF_UP);
         }
 
-        return cursoAssociado.getValorMensalidade()
-                .multiply(BigDecimal.valueOf(numeroDeMeses))
-                .setScale(2, RoundingMode.HALF_UP);
+        // Caso 2: O contrato abrange múltiplos meses.
+        BigDecimal valorTotal = BigDecimal.ZERO;
+
+        // --- Parte 1: Cálculo do primeiro mês (proporcional) ---
+        long diasNoPrimeiroMes = dtInicio.lengthOfMonth();
+        long diasRestantesPrimeiroMes = diasNoPrimeiroMes - dtInicio.getDayOfMonth() + 1;
+        BigDecimal valorPrimeiroMes = valorMensalidade
+                .multiply(BigDecimal.valueOf(diasRestantesPrimeiroMes))
+                .divide(BigDecimal.valueOf(diasNoPrimeiroMes), 2, RoundingMode.HALF_UP);
+        valorTotal = valorTotal.add(valorPrimeiroMes);
+        log.info("Valor proporcional do primeiro mês ({} dias de {}): R$ {}", diasRestantesPrimeiroMes, diasNoPrimeiroMes, valorPrimeiroMes);
+
+
+        // --- Parte 2: Cálculo dos meses intermediários (cheios) ---
+        LocalDate inicioProximoMes = dtInicio.plusMonths(1).withDayOfMonth(1);
+        LocalDate inicioUltimoMes = dataFim.withDayOfMonth(1);
+
+        if (inicioProximoMes.isBefore(inicioUltimoMes)) {
+            long mesesCheios = ChronoUnit.MONTHS.between(inicioProximoMes, inicioUltimoMes);
+            BigDecimal valorMesesCheios = valorMensalidade.multiply(BigDecimal.valueOf(mesesCheios));
+            valorTotal = valorTotal.add(valorMesesCheios);
+            log.info("Valor dos meses intermediários ({} meses): R$ {}", mesesCheios, valorMesesCheios);
+        }
+
+        // --- Parte 3: Cálculo do último mês (proporcional) ---
+        long diasNoUltimoMes = dataFim.lengthOfMonth();
+        long diasUtilizadosUltimoMes = dataFim.getDayOfMonth();
+        BigDecimal valorUltimoMes = valorMensalidade
+                .multiply(BigDecimal.valueOf(diasUtilizadosUltimoMes))
+                .divide(BigDecimal.valueOf(diasNoUltimoMes), 2, RoundingMode.HALF_UP);
+        valorTotal = valorTotal.add(valorUltimoMes);
+        log.info("Valor proporcional do último mês ({} dias de {}): R$ {}", diasUtilizadosUltimoMes, diasNoUltimoMes, valorUltimoMes);
+
+        log.info("Valor total final calculado para o contrato: R$ {}", valorTotal);
+        return valorTotal.setScale(2, RoundingMode.HALF_UP);
     }
 
     LocalDate getLocalDate(Matricula matricula) {
@@ -382,6 +431,21 @@ public class ContratoServiceImpl implements ContratoService {
                     return existingEntity;
                 });
     }
+
+    // Dentro da classe ContratoServiceImpl
+
+    @Override
+    public Mono<BigDecimal> getValorMensalidadePorContratoId(Long idContrato) {
+        return Mono.fromCallable(() ->
+                        repository.findValorMensalidadeByContratoId(idContrato)
+                                .orElseThrow(() -> new BaseException("Não foi possível encontrar o valor da mensalidade para o contrato ID: " + idContrato +
+                                        ". Verifique se o contrato e seu curso associado existem e possuem um valor definido."))
+                )
+                .subscribeOn(Schedulers.boundedElastic()) // Essencial para chamadas bloqueantes de banco de dados
+                .doOnSuccess(valor -> log.info("Valor da mensalidade encontrado para o contrato {}: {}", idContrato, valor))
+                .doOnError(e -> log.error("Falha ao obter valor da mensalidade para o contrato {}: {}", idContrato, e.getMessage()));
+    }
+
 
     private record EntitiesContext(Matricula matricula, Empresa empresa
     ) {

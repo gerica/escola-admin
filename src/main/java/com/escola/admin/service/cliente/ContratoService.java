@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Mono;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 public interface ContratoService {
@@ -33,4 +34,6 @@ public interface ContratoService {
     Mono<Contrato> findByIdMatricula(Long id);
 
     Mono<Void> deleteByIdMatricula(Long id);
+
+    Mono<BigDecimal> getValorMensalidadePorContratoId(Long idContrato);
 }

@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 
@@ -41,4 +42,19 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
     @Transactional
     @Query("DELETE FROM Contrato c WHERE c.matricula.id = :idMatricula")
     void deleteByMatriculaId(@Param("idMatricula") Long idMatricula);
+
+    /**
+     * Busca diretamente o valor da mensalidade do curso associado a um contrato,
+     * usando uma única query otimizada sem carregar as entidades completas.
+     *
+     * @param idContrato O ID do contrato.
+     * @return Um Optional contendo o valor da mensalidade, se encontrado.
+     */
+    @Query("SELECT cr.valorMensalidade " +
+            "FROM Contrato c " +
+            "JOIN c.matricula m " +
+            "JOIN m.turma t " +
+            "JOIN t.curso cr " +
+            "WHERE c.id = :idContrato")
+    Optional<BigDecimal> findValorMensalidadeByContratoId(@Param("idContrato") Long idContrato);
 }

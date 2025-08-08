@@ -85,14 +85,21 @@ public class ContaReceberServiceImpl implements ContaReceberService {
                 .doOnError(e -> log.error("Erro ao excluir conta a receber {}: {}", entity.getId(), e.getMessage(), e));
     }
 
-    // --- MÉTODO PRINCIPAL REATORADO ---
-
     @Override
     public Mono<Void> criar(Long idContrato) {
-        return contratoService.findById(idContrato)
-                .switchIfEmpty(Mono.error(new BaseException("Contrato não encontrado para o ID: " + idContrato)))
-                .flatMap(contrato -> {
-                    log.info("Iniciando processo de geração de parcelas para o contrato ID: {}", contrato.getId());
+        // 1. Buscar o Contrato e o Valor da Mensalidade do Curso em paralelo.
+        Mono<Contrato> contratoMono = contratoService.findById(idContrato)
+                .switchIfEmpty(Mono.error(new BaseException("Contrato não encontrado para o ID: " + idContrato)));
+
+        Mono<BigDecimal> valorMensalidadeMono = contratoService.getValorMensalidadePorContratoId(idContrato);
+
+        return contratoMono.zipWith(valorMensalidadeMono)
+                .flatMap(tuple -> {
+                    // 2. Extrair os resultados da Tupla
+                    Contrato contrato = tuple.getT1();
+                    BigDecimal valorMensalidadeCurso = tuple.getT2();
+
+                    log.info("Iniciando processo de geração de parcelas para o contrato ID: {} com mensalidade base de: {}", contrato.getId(), valorMensalidadeCurso);
 
                     long duracaoEmMeses = calcularDuracaoEmMeses(contrato);
                     if (duracaoEmMeses <= 0) {
@@ -100,21 +107,20 @@ public class ContaReceberServiceImpl implements ContaReceberService {
                         return Mono.empty();
                     }
 
-                    BigDecimal valorMensalPadrao = calcularValorMensalPadrao(contrato, duracaoEmMeses);
-                    List<ContaReceber> parcelas = gerarParcelas(contrato, valorMensalPadrao);
+                    // 3. Gerar as parcelas usando o valor da mensalidade vindo diretamente do curso.
+                    List<ContaReceber> parcelas = gerarParcelas(contrato, valorMensalidadeCurso);
 
                     if (parcelas.isEmpty()) {
                         log.warn("Nenhuma parcela foi gerada para o contrato ID: {}. Verifique as datas.", contrato.getId());
                         return Mono.empty();
                     }
 
+                    // 4. Ajustar a última parcela para garantir que a soma final bata com o valor TOTAL do contrato.
                     ajustarUltimaParcela(parcelas, contrato.getValorTotal());
 
                     return persistirParcelas(parcelas, contrato.getId());
                 });
     }
-
-    // --- MÉTODOS AUXILIARES PRIVADOS ---
 
     /**
      * Calcula a duração total do contrato em meses.
