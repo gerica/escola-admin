@@ -8,7 +8,6 @@ import com.escola.admin.model.mapper.auxiliar.TurmaMapper;
 import com.escola.admin.model.request.auxiliar.TurmaRequest;
 import com.escola.admin.model.response.auxiliar.TurmaResponse;
 import com.escola.admin.service.auxiliar.TurmaService;
-import graphql.GraphQLException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -127,6 +126,6 @@ public class TurmaController {
     public Mono<String> deleteTurmaById(@Argument Long id) {
         return turmaService.deleteById(id)
                 .then(Mono.just("Operação realizada com sucesso."))
-                .onErrorResume(e -> Mono.error(new GraphQLException("Falha realizar operação: " + e.getMessage())));
+                .onErrorResume(BaseException.class, Mono::error);
     }
 }

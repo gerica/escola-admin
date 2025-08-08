@@ -103,7 +103,7 @@ public class ContratoController {
         log.info("Executando parse contrato com o id: {}", id);
         return contratoService.parseContrato(id)
                 .map(contratoMapper::toResponse) // Se o Optional contiver um valor, aplica o mapper
-                .switchIfEmpty(Mono.error(new BaseException("Não foi possível fazer o parse do contrato. O serviço retornou um resultado vazio.")))
+//                .switchIfEmpty(Mono.error(new BaseException("Não foi possível fazer o parse do contrato. O serviço retornou um resultado vazio.")))
                 .onErrorResume(BaseException.class, Mono::error);
     }
 

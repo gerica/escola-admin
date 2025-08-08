@@ -18,4 +18,10 @@ public interface TurmaRepository extends CrudRepository<Turma, Long> {
             " (LOWER(e.codigo) LIKE LOWER(CONCAT('%', :criteria, '%')) ) OR " +
             " (LOWER(e.professor) LIKE LOWER(CONCAT('%', :criteria, '%'))) ) ")
     Optional<Page<Turma>> findByFiltro(@Param("criteria") String filtro, @Param("idEmpresa") Long idEmpresa, Pageable pageable);
+
+    @Query("SELECT t FROM Turma t " +
+            " JOIN FETCH t.curso c" +
+            " JOIN FETCH t.empresa e" +
+            " where t.id = :id")
+    Optional<Turma> findByIdAndLoadCursoAndEmpresa(@Param("id") Long id);
 }

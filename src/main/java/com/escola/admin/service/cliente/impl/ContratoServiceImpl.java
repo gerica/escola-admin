@@ -236,7 +236,8 @@ public class ContratoServiceImpl implements ContratoService {
     public Mono<Contrato> parseContrato(Long idContrato) {
         return Mono.defer(() -> { // Mono.defer para garantir que a lógica seja executada apenas na subscrição
             try {
-                Mono<Parametro> parametroMono = parametroService.findByChave(CHAVE_CONTRATO_MODELO_PADRAO);
+                Mono<Parametro> parametroMono = parametroService.findByChave(CHAVE_CONTRATO_MODELO_PADRAO)
+                        .switchIfEmpty(Mono.error(new BaseException("Não exsite nenhum modelo configurado!")));
                 Mono<Contrato> contratoOptionalMono = findById(idContrato);
 
                 return Mono.zip(contratoOptionalMono, parametroMono)
@@ -248,8 +249,8 @@ public class ContratoServiceImpl implements ContratoService {
                             return Mono.just(contrato); // Retorna o contrato modificado
 
                         })
-                        .doOnError(e -> log.error("Erro ao chamar o admin-service: {}", e.getMessage())) // Captura erros
-                        .onErrorResume(e -> Mono.empty()); // Em caso de erro, retorna um Mono vazio
+                        .doOnError(e -> log.error("Erro ao chamar o admin-service: {}", e.getMessage()));
+
             } catch (Exception e) {
                 log.error("Erro ao chamar o admin-service (inicialização): {}", e.getMessage());
                 return Mono.error(e); // Retorna um Mono com erro para falhas na fase de defer

@@ -40,7 +40,6 @@ public class ContaReceberServiceImpl implements ContaReceberService {
     ContaReceberMapper mapper;
     ContratoService contratoService;
 
-    // ... (métodos save, findById, findByFiltro, deleteById, delete permanecem os mesmos)
     @Override
     public Mono<ContaReceber> save(ContaReceberRequest request) {
         return validateRequest(request) // Passo 1: Valida a requisição de entrada

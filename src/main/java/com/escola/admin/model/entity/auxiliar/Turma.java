@@ -52,7 +52,7 @@ public class Turma {
     @Column(nullable = false) // Horário de término da aula/atividade (apenas hora e minuto)
     LocalTime horarioFim;
 
-    @ElementCollection(targetClass = DayOfWeek.class)
+    @ElementCollection(targetClass = DayOfWeek.class, fetch = FetchType.EAGER)
     @CollectionTable(name = "tb_turma_dias_semana", joinColumns = @JoinColumn(name = "id_turma"))
     @Column(name = "dia_semana", nullable = false)
     @Enumerated(EnumType.STRING) // Armazena o enum como String no banco de dados
