@@ -54,7 +54,8 @@ public class CursoController {
                 usuarioAutenticado.getEmpresaIdFromToken(), // Set the idEmpresa here
                 request.nome(),
                 request.descricao(),
-                request.duracao(),
+                request.duracaoValor(),
+                request.duracaoUnidade(),
                 request.categoria(),
                 request.valorMensalidade(),
                 request.ativo()

@@ -6,7 +6,6 @@ import java.time.LocalDate;
 
 public record AnexoResponse(
         Long id,
-        Long idContrato,
         String nomeArquivo,
         @JsonFormat(pattern = "yyyy-MM-dd")
         LocalDate dataCadastro

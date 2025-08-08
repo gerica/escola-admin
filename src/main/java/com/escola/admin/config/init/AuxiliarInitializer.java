@@ -85,6 +85,7 @@ public class AuxiliarInitializer {
         }
         log.info("{} cursos encontrados para vincular às turmas.", cursosExistentes.size());
 
+        LocalDate dtInicio = LocalDate.of(2025, 1, 31);
         // CORREÇÃO: Ajuste na criação das Turmas para usar os campos corretos do TurmaRequest
         // e adicionar dados mais realistas.
         List<TurmaRequest> turmasToCreate = List.of(
@@ -100,8 +101,8 @@ public class AuxiliarInitializer {
                         .professor("Ana Clara")
                         .idEmpresa(empresa.getId())
                         .idCurso(cursosExistentes.get(0).getId())
-                        .dataInicio(LocalDate.of(2025, 1, 31))
-                        .dataFim(LocalDate.of(2025, 12, 31))
+                        .dataInicio(dtInicio)
+                        .dataFim(calcularDataFim(dtInicio, cursosExistentes.get(0)))
                         .build(),
                 TurmaRequest.builder()
                         .nome("Jazz Tarde 2024")
@@ -115,8 +116,8 @@ public class AuxiliarInitializer {
                         .professor("Bruno Rocha")
                         .idEmpresa(empresa.getId())
                         .idCurso(cursosExistentes.get(1).getId())
-                        .dataInicio(LocalDate.of(2025, 1, 31))
-                        .dataFim(LocalDate.of(2025, 12, 31))
+                        .dataInicio(dtInicio)
+                        .dataFim(calcularDataFim(dtInicio, cursosExistentes.get(0)))
                         .build(),
                 TurmaRequest.builder()
                         .nome("Bebês Musicalizados 2024")
@@ -130,8 +131,8 @@ public class AuxiliarInitializer {
                         .professor("Carla Dias")
                         .idEmpresa(empresa.getId())
                         .idCurso(cursosExistentes.get(2).getId())
-                        .dataInicio(LocalDate.of(2025, 1, 31))
-                        .dataFim(LocalDate.of(2025, 12, 31))
+                        .dataInicio(dtInicio)
+                        .dataFim(calcularDataFim(dtInicio, cursosExistentes.get(2)))
                         .build(),
                 TurmaRequest.builder()
                         .nome("Pré-Escola Integral 2024")
@@ -145,8 +146,8 @@ public class AuxiliarInitializer {
                         .professor("Fernanda Lima")
                         .idEmpresa(empresa.getId())
                         .idCurso(cursosExistentes.get(3).getId())
-                        .dataInicio(LocalDate.of(2025, 1, 31))
-                        .dataFim(LocalDate.of(2025, 12, 31))
+                        .dataInicio(dtInicio)
+                        .dataFim(calcularDataFim(dtInicio, cursosExistentes.get(2)))
                         .build(),
                 TurmaRequest.builder()
                         .nome("Hip Hop Noite 2024")
@@ -160,8 +161,8 @@ public class AuxiliarInitializer {
                         .professor("Lucas Mendes")
                         .idEmpresa(empresa.getId())
                         .idCurso(cursosExistentes.get(4).getId())
-                        .dataInicio(LocalDate.of(2025, 1, 31))
-                        .dataFim(LocalDate.of(2025, 12, 31))
+                        .dataInicio(dtInicio)
+                        .dataFim(calcularDataFim(dtInicio, cursosExistentes.get(4)))
                         .build()
         );
 
@@ -190,11 +191,11 @@ public class AuxiliarInitializer {
 
         log.info("Criando 5 cursos de exemplo...");
         List<CursoRequest> cursosToCreate = List.of(
-                CursoRequest.builder().nome("Ballet Clássico Infantil").descricao("Aulas de ballet para crianças de 5 a 8 anos.").duracao("1 ano").categoria("Dança").valorMensalidade(150.00).ativo(true).idEmpresa(idEmpresa).build(),
-                CursoRequest.builder().nome("Jazz Dance Avançado").descricao("Técnicas avançadas de Jazz Dance.").duracao("6 meses").categoria("Dança").valorMensalidade(180.00).ativo(true).idEmpresa(idEmpresa).build(),
-                CursoRequest.builder().nome("Musicalização para Bebês").descricao("Introdução à música para bebês de 0 a 2 anos.").duracao("3 meses").categoria("Música").valorMensalidade(120.00).ativo(true).idEmpresa(idEmpresa).build(),
-                CursoRequest.builder().nome("Educação Infantil 1 (Pré-Escola)").descricao("Ensino fundamental para crianças de 4 anos.").duracao("1 ano").categoria("Educação").valorMensalidade(500.00).ativo(true).idEmpresa(idEmpresa).build(),
-                CursoRequest.builder().nome("Dança de Rua (Hip Hop)").descricao("Aulas de Hip Hop para adolescentes.").duracao("8 meses").categoria("Dança").valorMensalidade(160.00).ativo(true).idEmpresa(idEmpresa).build()
+                CursoRequest.builder().nome("Ballet Clássico Infantil").descricao("Aulas de ballet para crianças de 5 a 8 anos.").duracaoValor(1).duracaoUnidade("Anos").categoria("Dança").valorMensalidade(150.00).ativo(true).idEmpresa(idEmpresa).build(),
+                CursoRequest.builder().nome("Jazz Dance Avançado").descricao("Técnicas avançadas de Jazz Dance.").duracaoValor(6).duracaoUnidade("Meses").categoria("Dança").valorMensalidade(180.00).ativo(true).idEmpresa(idEmpresa).build(),
+                CursoRequest.builder().nome("Musicalização para Bebês").descricao("Introdução à música para bebês de 0 a 2 anos.").duracaoValor(22).duracaoUnidade("Semanas").categoria("Música").valorMensalidade(120.00).ativo(true).idEmpresa(idEmpresa).build(),
+                CursoRequest.builder().nome("Educação Infantil 1 (Pré-Escola)").descricao("Ensino fundamental para crianças de 4 anos.").duracaoValor(4).duracaoUnidade("Meses").categoria("Educação").valorMensalidade(500.00).ativo(true).idEmpresa(idEmpresa).build(),
+                CursoRequest.builder().nome("Dança de Rua (Hip Hop)").descricao("Aulas de Hip Hop para adolescentes.").duracaoValor(8).duracaoUnidade("Meses").categoria("Dança").valorMensalidade(160.00).ativo(true).idEmpresa(idEmpresa).build()
         );
 
         cursosToCreate.forEach(request -> cursoService.save(request)
@@ -262,5 +263,36 @@ public class AuxiliarInitializer {
         }
         log.warn("Nenhum curso existente encontrado para a empresa ID: {}", idEmpresa);
         return Collections.emptyList();
+    }
+
+    // /Users/rogeriocardoso/pessoal/escola/admin-service/src/main/java/com/escola/admin/service/auxiliar/impl/TurmaServiceImpl.java
+
+    /**
+     * Calcula a data de término de uma turma com base na sua data de início e na duração do curso associado.
+     *
+     * @param dataInicio A data de início da turma.
+     * @param curso      O curso ao qual a turma pertence, contendo a duração.
+     * @return A data de término calculada, ou null se os dados de entrada forem insuficientes.
+     */
+    private LocalDate calcularDataFim(LocalDate dataInicio, Curso curso) {
+        if (dataInicio == null || curso == null || curso.getDuracaoValor() == null || curso.getDuracaoUnidade() == null) {
+            log.warn("Não foi possível calcular a data final. Dados de entrada insuficientes.");
+            return null; // Ou poderia retornar o próprio dataInicio, dependendo da regra de negócio.
+        }
+
+        Integer valor = curso.getDuracaoValor();
+        String unidade = curso.getDuracaoUnidade().toLowerCase().trim();
+
+        // Usamos um switch para tratar as diferentes unidades de tempo
+        return switch (unidade) {
+            case "ano", "anos" -> dataInicio.plusYears(valor);
+            case "mes", "meses" -> dataInicio.plusMonths(valor);
+            case "semana", "semanas" -> dataInicio.plusWeeks(valor);
+            case "dia", "dias" -> dataInicio.plusDays(valor);
+            default -> {
+                log.warn("Unidade de duração '{}' não reconhecida. Não foi possível calcular a data final.", curso.getDuracaoUnidade());
+                yield null; // Retorna null se a unidade for desconhecida
+            }
+        };
     }
 }

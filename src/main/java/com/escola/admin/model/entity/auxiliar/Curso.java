@@ -28,8 +28,11 @@ public class Curso {
     @Column(nullable = false) // Descrição detalhada do curso
     String descricao;
 
-    @Column(nullable = false) // Duração do curso (ex: "1 ano", "6 meses", "30 horas")
-    String duracao;
+    @Column(nullable = false) // Valor da Duração do curso (ex: "1", "6", "30")
+    Integer duracaoValor;
+
+    @Column(nullable = false) // Unidade da  Duração do curso (ex: "ano", "meses", "30 semanas")
+    String duracaoUnidade;
 
     @Column(nullable = true) // Categoria do curso (ex: "Dança Clássica", "Educação Infantil", "Musicalização")
     String categoria;

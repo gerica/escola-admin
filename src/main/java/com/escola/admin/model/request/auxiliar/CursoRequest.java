@@ -8,7 +8,8 @@ public record CursoRequest(
         Long idEmpresa,
         String nome,
         String descricao,
-        String duracao,
+        Integer duracaoValor,
+        String duracaoUnidade,
         String categoria,
         Double valorMensalidade,
         Boolean ativo

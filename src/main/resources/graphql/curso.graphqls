@@ -5,7 +5,8 @@ type CursoResponse {
     id: ID!
     nome: String!
     descricao: String
-    duracao: String!
+    duracaoValor: ID!
+    duracaoUnidade: String!
     categoria: String
     valorMensalidade: Float!
     ativo: Boolean!
@@ -19,7 +20,8 @@ input CursoRequest {
     id: ID # Opcional para criação, obrigatório para atualização
     nome: String!
     descricao: String
-    duracao: String!
+    duracaoValor: ID!
+    duracaoUnidade: String!
     categoria: String
     valorMensalidade: Float!
     ativo: Boolean # Opcional, padrão 'true' se não fornecido
