@@ -3,6 +3,7 @@ package com.escola.admin.service.cliente;
 
 import com.escola.admin.model.entity.auxiliar.Matricula;
 import com.escola.admin.model.entity.cliente.Contrato;
+import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.request.cliente.ContratoModeloRequest;
 import com.escola.admin.model.request.cliente.ContratoRequest;
 import org.springframework.data.domain.Page;
@@ -19,7 +20,7 @@ public interface ContratoService {
 
     Mono<Void> saveModelo(ContratoModeloRequest request);
 
-    Optional<Page<Contrato>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable);
+    Optional<Page<Contrato>> findByFiltro(String filtro, Long idEmpresa, StatusContrato statusContrato, Pageable pageable);
 
     Mono<Contrato> findById(Long id);
 

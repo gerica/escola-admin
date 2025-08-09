@@ -53,6 +53,7 @@ type ContratoResponsePage {
 extend type Query {
     fetchAllContratos(
         filtro: String
+        statusContrato: StatusContrato
         page: Int = 0 # Default to page 0
         size: Int = 10 # Default to size 10
         sort: [SortRequest]

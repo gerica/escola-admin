@@ -180,8 +180,8 @@ public class ContratoServiceImpl implements ContratoService {
     }
 
     @Override
-    public Optional<Page<Contrato>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable) {
-        return repository.findByFiltro(filtro, idEmpresa, pageable);
+    public Optional<Page<Contrato>> findByFiltro(String filtro, Long idEmpresa, StatusContrato statusContrato, Pageable pageable) {
+        return repository.findByFiltro(filtro, idEmpresa, statusContrato, pageable);
     }
 
     @Override

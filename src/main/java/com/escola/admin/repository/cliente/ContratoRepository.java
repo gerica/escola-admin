@@ -1,6 +1,7 @@
 package com.escola.admin.repository.cliente;
 
 import com.escola.admin.model.entity.cliente.Contrato;
+import com.escola.admin.model.entity.cliente.StatusContrato;
 import jakarta.persistence.QueryHint;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -19,6 +20,7 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
 
     @Query(value = "SELECT e FROM Contrato e " +
             " WHERE e.empresa.id = :idEmpresa " +
+            " AND (:statusContrato IS NULL OR e.statusContrato = :statusContrato) " + // <-- This line was added
             " AND ( (:criteria IS NULL OR :criteria = '') OR " +
             " (LOWER(e.numeroContrato) LIKE LOWER(CONCAT('%', :criteria, '%')) ) OR " +
             " (LOWER(e.cliente.nome) LIKE LOWER(CONCAT('%', :criteria, '%')) ) OR " +
@@ -30,9 +32,12 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
             @QueryHint(name = "javax.persistence.query.timeout", value = "5000"),
             @QueryHint(name = "jakarta.persistence.cache.retrieveMode", value = "USE"), //USE, BYPASS, REFRESH
             @QueryHint(name = "jakarta.persistence.cache.storeMode", value = "USE"),
-            @QueryHint(name = "org.hibernate.comment", value = "Recuperar contratos utilizando um filtro.\"")
+            @QueryHint(name = "org.hibernate.comment", value = "Recuperar contratos utilizando um filtro e status opcional.")
     })
-    Optional<Page<Contrato>> findByFiltro(@Param("criteria") String filtro, @Param("idEmpresa") Long idEmpresa, Pageable pageable);
+    Optional<Page<Contrato>> findByFiltro(@Param("criteria") String filtro,
+                                          @Param("idEmpresa") Long idEmpresa,
+                                          @Param("statusContrato") StatusContrato statusContrato, // <-- @Param added
+                                          Pageable pageable);
 
     @Query(value = "SELECT e FROM Contrato e " +
             " WHERE e.matricula.id = :idMatricula ")

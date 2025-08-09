@@ -4,6 +4,7 @@ import com.escola.admin.controller.help.PageableHelp;
 import com.escola.admin.controller.help.SortInput;
 import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Usuario;
+import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.mapper.cliente.ContratoMapper;
 import com.escola.admin.model.request.cliente.ContratoModeloRequest;
 import com.escola.admin.model.request.cliente.ContratoRequest;
@@ -58,6 +59,7 @@ public class ContratoController {
     @PreAuthorize("isAuthenticated()")
     public Mono<Page<ContratoResponse>> fetchAllContratos(
             @Argument String filtro,
+            @Argument StatusContrato statusContrato,
             @Argument int page,
             @Argument int size,
             @Argument(name = "sort") List<SortInput> sortRequests,
@@ -70,12 +72,9 @@ public class ContratoController {
 
         Pageable pageable = pageableHelp.getPageable(page, size, sortRequests);
 
-        return Mono.fromCallable(() -> contratoService.findByFiltro(filtro, usuarioAutenticado.getEmpresaIdFromToken(), pageable)
+        return Mono.fromCallable(() -> contratoService.findByFiltro(filtro, usuarioAutenticado.getEmpresaIdFromToken(), statusContrato, pageable)
                 .map(usuarioPage -> usuarioPage.map(contratoMapper::toResponse))
                 .orElse(Page.empty(pageable)));
-
-//        Page<Contrato> entities = contratoService.findByFiltro(filtro, pageableHelp.getPageable(page, size, sortRequests)).orElse(Page.empty());
-//        return entities.map(contratoMapper::toResponse);
     }
 
     @QueryMapping
@@ -103,7 +102,6 @@ public class ContratoController {
         log.info("Executando parse contrato com o id: {}", id);
         return contratoService.parseContrato(id)
                 .map(contratoMapper::toResponse) // Se o Optional contiver um valor, aplica o mapper
-//                .switchIfEmpty(Mono.error(new BaseException("Não foi possível fazer o parse do contrato. O serviço retornou um resultado vazio.")))
                 .onErrorResume(BaseException.class, Mono::error);
     }
 

@@ -78,3 +78,12 @@ enum StatusContaReceber{
     VENCIDA
     CANCELADA
 }
+
+enum StatusContrato {
+    ATIVO
+    INATIVO
+    PENDENTE
+    CANCELADO
+    CONCLUIDO
+    EM_NEGOCIACAO
+}
