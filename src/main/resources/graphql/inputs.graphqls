@@ -11,7 +11,7 @@ input AuthenticationRequest {
 
 input SortRequest {
      property: String!
-     direction: SortOrder!
+     direction: SortOrder # <-- Make sure there is NO exclamation mark here
 }
 
 #O novo token e os dados do usuário impersonado.
