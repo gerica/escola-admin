@@ -23,7 +23,6 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,13 +39,34 @@ public class ContaReceberServiceImpl implements ContaReceberService {
     ContaReceberMapper mapper;
     ContratoService contratoService;
 
+    public static void main(String[] args) {
+        // É uma boa prática criar BigDecimal a partir de String para evitar imprecisões de ponto flutuante.
+        BigDecimal valorTotal = new BigDecimal("1903.10");
+        BigDecimal valorMensalidadeCurso = new BigDecimal("500");
+
+        // Primeiro, realizamos a divisão especificando a escala (casas decimais) e o arredondamento.
+        int casasDecimais = 4;
+        RoundingMode modoArredondamento = RoundingMode.DOWN; // Trunca o resultado, não arredonda para cima.
+
+        BigDecimal resultadoCompleto = valorTotal.divide(valorMensalidadeCurso, casasDecimais, modoArredondamento);
+        System.out.println("Resultado da divisão com 4 casas: " + resultadoCompleto); // Resultado: 3.8062
+
+        // Para pegar a parte inteira a partir do resultado completo
+        BigDecimal parteInteiraDoResultado = new BigDecimal(resultadoCompleto.toBigInteger());
+        System.out.println("Parte inteira do resultado: " + parteInteiraDoResultado); // Resultado: 3
+
+        // Para pegar a parte fracionária, subtraímos a parte inteira do total
+        BigDecimal parteFracionaria = resultadoCompleto.subtract(parteInteiraDoResultado);
+        System.out.println("Parte fracionária (com " + casasDecimais + " dígitos): " + parteFracionaria); // Resultado: 0.8062
+    }
+
     @Override
     public Mono<ContaReceber> save(ContaReceberRequest request) {
-        return validateRequest(request) // Passo 1: Valida a requisição de entrada
-                .then(getRequiredEntities(request)) // Passo 2: Busca todas as entidades necessárias concorrentemente
-                .flatMap(contrato -> updateOrCreate(request, contrato)) // Passo 3: Encontra ou cria a entidade ContaReceber
-                .flatMap(this::persist) // Passo 4: Persiste a ContaReceber
-                .doOnSuccess(savedEntity -> log.info("Conta a receber salvo com sucesso. ID: {}", savedEntity.getId()))
+        return validateRequest(request)
+                .then(getRequiredEntities(request))
+                .flatMap(contrato -> updateOrCreate(request, contrato))
+                .flatMap(this::persist)
+                .doOnSuccess(savedEntity -> log.info("Conta a receber salva com sucesso. ID: {}", savedEntity.getId()))
                 .doOnError(e -> log.error("Falha na operação de salvar conta a receber: {}", e.getMessage(), e))
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
                 .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException);
@@ -86,7 +106,6 @@ public class ContaReceberServiceImpl implements ContaReceberService {
 
     @Override
     public Mono<Void> criar(Long idContrato) {
-        // 1. Buscar o Contrato e o Valor da Mensalidade do Curso em paralelo.
         Mono<Contrato> contratoMono = contratoService.findById(idContrato)
                 .switchIfEmpty(Mono.error(new BaseException("Contrato não encontrado para o ID: " + idContrato)));
 
@@ -94,19 +113,11 @@ public class ContaReceberServiceImpl implements ContaReceberService {
 
         return contratoMono.zipWith(valorMensalidadeMono)
                 .flatMap(tuple -> {
-                    // 2. Extrair os resultados da Tupla
                     Contrato contrato = tuple.getT1();
                     BigDecimal valorMensalidadeCurso = tuple.getT2();
 
                     log.info("Iniciando processo de geração de parcelas para o contrato ID: {} com mensalidade base de: {}", contrato.getId(), valorMensalidadeCurso);
 
-                    long duracaoEmMeses = calcularDuracaoEmMeses(contrato);
-                    if (duracaoEmMeses <= 0) {
-                        log.warn("Duração do contrato é zero ou negativa. Nenhuma conta será gerada.");
-                        return Mono.empty();
-                    }
-
-                    // 3. Gerar as parcelas usando o valor da mensalidade vindo diretamente do curso.
                     List<ContaReceber> parcelas = gerarParcelas(contrato, valorMensalidadeCurso);
 
                     if (parcelas.isEmpty()) {
@@ -114,98 +125,71 @@ public class ContaReceberServiceImpl implements ContaReceberService {
                         return Mono.empty();
                     }
 
-                    // 4. Ajustar a última parcela para garantir que a soma final bata com o valor TOTAL do contrato.
-                    ajustarUltimaParcela(parcelas, contrato.getValorTotal());
-
                     return persistirParcelas(parcelas, contrato.getId());
                 });
     }
 
     /**
-     * Calcula a duração total do contrato em meses.
+     * Gera a lista de todas as parcelas.
+     * A primeira parcela inclui o valor proporcional do primeiro mês e do último.
+     * As parcelas intermediárias são de valor cheio.
      */
-    private long calcularDuracaoEmMeses(Contrato contrato) {
-        // Adiciona 1 dia para incluir o mês final por completo no cálculo.
-        return ChronoUnit.MONTHS.between(
-                contrato.getDataInicio().withDayOfMonth(1),
-                contrato.getDataFim().withDayOfMonth(1)
-        ) + 1;
-    }
-
-    /**
-     * Calcula o valor da mensalidade padrão dividindo o valor total pela duração.
-     */
-    private BigDecimal calcularValorMensalPadrao(Contrato contrato, long duracaoEmMeses) {
-        BigDecimal valorTotal = contrato.getValorTotal();
-        BigDecimal duracao = BigDecimal.valueOf(duracaoEmMeses);
-        BigDecimal valorMensal = valorTotal.divide(duracao, MATH_CONTEXT);
-        log.info("Valor mensal padrão calculado: {}", valorMensal);
-        return valorMensal;
-    }
-
-    /**
-     * Gera a lista de todas as parcelas (Contas a Receber), tratando a proporcionalidade da primeira.
-     */
-    private List<ContaReceber> gerarParcelas(Contrato contrato, BigDecimal valorMensalPadrao) {
+    private List<ContaReceber> gerarParcelas(Contrato contrato, BigDecimal valorMensalidadeCurso) {
         List<ContaReceber> parcelas = new ArrayList<>();
         LocalDate hoje = LocalDate.now();
-        LocalDate dataInicioContrato = contrato.getDataInicio();
-        LocalDate dataFimContrato = contrato.getDataFim();
 
-        // A geração começa em 'hoje' ou na data de início do contrato, o que for mais tarde.
-        LocalDate dataIteracao = hoje.isAfter(dataInicioContrato) ? hoje : dataInicioContrato;
-
-        while (!dataIteracao.isAfter(dataFimContrato)) {
-            BigDecimal valorParcela;
-            LocalDate dataVencimento = dataIteracao.with(TemporalAdjusters.lastDayOfMonth());
-
-            // Lógica para cálculo proporcional da primeira parcela
-            if (dataIteracao.equals(hoje) && hoje.isAfter(dataInicioContrato) && hoje.getDayOfMonth() > 1) {
-                BigDecimal diasNoMes = BigDecimal.valueOf(dataIteracao.lengthOfMonth());
-                BigDecimal diasRestantes = BigDecimal.valueOf(dataVencimento.getDayOfMonth() - dataIteracao.getDayOfMonth() + 1);
-                valorParcela = valorMensalPadrao.multiply(diasRestantes, MATH_CONTEXT).divide(diasNoMes, MATH_CONTEXT);
-                log.info("Gerando primeira parcela proporcional. Venc: {}, Valor: {}", dataVencimento, valorParcela);
-            } else {
-                valorParcela = valorMensalPadrao;
-                log.info("Gerando parcela mensal cheia. Venc: {}, Valor: {}", dataVencimento, valorParcela);
-            }
-
-            // Garante que a data de vencimento não ultrapasse o fim do contrato
-            if (dataVencimento.isAfter(dataFimContrato)) {
-                dataVencimento = dataFimContrato;
-            }
-
-            ContaReceber conta = new ContaReceber();
-            conta.setStatus(StatusContaReceber.ABERTA);
-            conta.setContrato(contrato);
-            conta.setDesconto(contrato.getDesconto());
-            conta.setDataVencimento(dataVencimento);
-            conta.setValorTotal(valorParcela.setScale(2, RoundingMode.HALF_UP));
-            parcelas.add(conta);
-
-            // Avança para o primeiro dia do próximo mês
-            dataIteracao = dataIteracao.plusMonths(1).withDayOfMonth(1);
+        // Validação para evitar divisão por zero, que lançaria uma ArithmeticException.
+        if (valorMensalidadeCurso == null || valorMensalidadeCurso.compareTo(BigDecimal.ZERO) <= 0) {
+            log.error("Valor da mensalidade do curso é inválido (nulo, zero ou negativo). Não é possível gerar parcelas para o contrato ID: {}", contrato.getId());
+            return Collections.emptyList();
         }
+
+        // divideAndRemainder é a forma ideal para obter o número de parcelas cheias e o valor restante.
+        // resultado[0] = quociente (número de parcelas com valor cheio)
+        // resultado[1] = resto (valor da última parcela parcial)
+        BigDecimal[] resultadoDivisao = contrato.getValorTotal().divideAndRemainder(valorMensalidadeCurso);
+        int numeroParcelasCheias = resultadoDivisao[0].intValue();
+        BigDecimal valorParcelaPrimeira = resultadoDivisao[1];
+
+        // Define a data de vencimento da primeira parcela (ex: 3 dias a partir de hoje).
+        LocalDate dataVencimento = hoje.plusDays(3);
+
+        // 2. Gera a parcela inicial com o valor fracionado, se houver.
+        // O seu `if (parteFracionaria > 0)` é equivalente a esta verificação.
+        if (valorParcelaPrimeira.compareTo(BigDecimal.ZERO) > 0) {
+            parcelas.add(criarContaReceber(contrato, valorParcelaPrimeira, dataVencimento));
+            log.info("Gerando parcela inicial com valor francionado de {}. Vencimento: {}", valorParcelaPrimeira, dataVencimento);
+        }
+
+        // 1. Gera as parcelas com valor cheio
+        log.info("Gerando {} parcelas de valor cheio para o contrato ID: {}", numeroParcelasCheias, contrato.getId());
+        for (int i = 0; i < numeroParcelasCheias; i++) {
+            // Define o vencimento da próxima parcela para o final do mês seguinte.
+            dataVencimento = dataVencimento.plusMonths(1).with(TemporalAdjusters.lastDayOfMonth());
+
+            parcelas.add(criarContaReceber(contrato, valorMensalidadeCurso, dataVencimento));
+            log.debug("Gerada parcela {}/{}. Vencimento: {}, Valor: {}", i + 1, numeroParcelasCheias, dataVencimento, valorMensalidadeCurso);
+
+        }
+
+        if (parcelas.isEmpty()) {
+            log.warn("Nenhuma parcela foi gerada para o contrato ID: {}. Verifique o valor total e o valor da mensalidade.", contrato.getId());
+        }
+
         return parcelas;
     }
 
     /**
-     * Ajusta o valor da última parcela para corrigir diferenças de arredondamento,
-     * garantindo que a soma das parcelas seja exatamente o valor total do contrato.
+     * Método auxiliar para criar uma instância de ContaReceber.
      */
-    private void ajustarUltimaParcela(List<ContaReceber> parcelas, BigDecimal valorTotalContrato) {
-        BigDecimal somaDasParcelas = parcelas.stream()
-                .map(ContaReceber::getValorTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal diferenca = valorTotalContrato.subtract(somaDasParcelas);
-
-        if (diferenca.compareTo(BigDecimal.ZERO) != 0) {
-            log.info("Ajustando última parcela em {} para bater com o valor total do contrato.", diferenca);
-            ContaReceber ultimaConta = parcelas.get(parcelas.size() - 1);
-            BigDecimal novoValor = ultimaConta.getValorTotal().add(diferenca);
-            ultimaConta.setValorTotal(novoValor.setScale(2, RoundingMode.HALF_UP));
-        }
+    private ContaReceber criarContaReceber(Contrato contrato, BigDecimal valor, LocalDate dataVencimento) {
+        ContaReceber conta = new ContaReceber();
+        conta.setStatus(StatusContaReceber.ABERTA);
+        conta.setContrato(contrato);
+        conta.setDesconto(contrato.getDesconto());
+        conta.setDataVencimento(dataVencimento);
+        conta.setValorTotal(valor.setScale(2, RoundingMode.HALF_UP));
+        return conta;
     }
 
     /**
@@ -219,7 +203,6 @@ public class ContaReceberServiceImpl implements ContaReceberService {
                 .doOnError(e -> log.error("Erro ao persistir contas a receber para o contrato ID {}: {}", idContrato, e.getMessage(), e));
     }
 
-    // --- MÉTODOS PRIVADOS EXISTENTES ---
     private Mono<Void> validateRequest(ContaReceberRequest request) {
         if (request.idContrato() == null) {
             return Mono.error(new BaseException("O ID do contrato é obrigatório."));
