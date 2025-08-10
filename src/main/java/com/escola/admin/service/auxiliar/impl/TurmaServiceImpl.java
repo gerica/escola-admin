@@ -3,6 +3,7 @@ package com.escola.admin.service.auxiliar.impl;
 import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.auxiliar.Curso;
+import com.escola.admin.model.entity.auxiliar.StatusTurma;
 import com.escola.admin.model.entity.auxiliar.Turma;
 import com.escola.admin.model.mapper.auxiliar.TurmaMapper;
 import com.escola.admin.model.request.auxiliar.TurmaRequest;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -113,20 +115,9 @@ public class TurmaServiceImpl implements TurmaService {
     }
 
     @Override
-    public Optional<Page<Turma>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable) {
-        log.info("Buscando turmas por filtro '{}' com paginação: {}", filtro, pageable);
-        try {
-            Optional<Page<Turma>> result = repository.findByFiltro(filtro, idEmpresa, pageable);
-            if (result.isPresent()) {
-                log.info("Encontrados {} turmas paginados para o filtro '{}'.", result.get().getTotalElements(), filtro);
-            } else {
-                log.warn("Nenhum resultado de paginação para o filtro '{}'.", filtro);
-            }
-            return result;
-        } catch (Exception e) {
-            log.error("Erro ao buscar turmas por filtro '{}' e paginação {}: {}", filtro, pageable, e.getMessage(), e);
-            throw e; // Re-lança a exceção após logar
-        }
+    public Optional<Page<Turma>> findByFiltro(String filtro, List<StatusTurma> status, Long idEmpresa, Pageable pageable) {
+        List<StatusTurma> statusParaFiltro = (status != null && status.isEmpty()) ? null : status;
+        return repository.findByFiltro(filtro, statusParaFiltro, idEmpresa, pageable);
     }
 
     @Override

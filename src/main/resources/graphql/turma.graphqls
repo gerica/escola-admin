@@ -54,6 +54,7 @@ extend type Query {
     # Busca uma lista paginada de cargos, com filtro opcional
     fetchAllTurmas(
         filtro: String
+        status: [StatusTurma]
         page: Int! = 0 # Valor padrão para a página
         size: Int! = 10 # Valor padrão para o tamanho da página
         sort: [SortRequest] # Lista de critérios de ordenação

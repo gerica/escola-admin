@@ -4,6 +4,7 @@ import com.escola.admin.controller.help.PageableHelp;
 import com.escola.admin.controller.help.SortInput;
 import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Usuario;
+import com.escola.admin.model.entity.auxiliar.StatusTurma;
 import com.escola.admin.model.mapper.auxiliar.TurmaMapper;
 import com.escola.admin.model.request.auxiliar.TurmaRequest;
 import com.escola.admin.model.response.auxiliar.TurmaResponse;
@@ -84,6 +85,7 @@ public class TurmaController {
     @PreAuthorize("isAuthenticated()")
     public Mono<Page<TurmaResponse>> fetchAllTurmas(
             @Argument String filtro,
+            @Argument List<StatusTurma> status,
             @Argument int page,
             @Argument int size,
             @Argument(name = "sort") List<SortInput> sortRequests,
@@ -96,7 +98,7 @@ public class TurmaController {
 
         Pageable pageable = pageableHelp.getPageable(page, size, sortRequests);
 
-        return Mono.fromCallable(() -> turmaService.findByFiltro(filtro, usuarioAutenticado.getEmpresaIdFromToken(), pageable)
+        return Mono.fromCallable(() -> turmaService.findByFiltro(filtro, status, usuarioAutenticado.getEmpresaIdFromToken(), pageable)
                 .map(turmaPage -> turmaPage.map(turmaMapper::toResponse))
                 .orElse(Page.empty(pageable)));
     }

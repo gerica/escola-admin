@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 
@@ -20,7 +21,7 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
 
     @Query(value = "SELECT e FROM Contrato e " +
             " WHERE e.empresa.id = :idEmpresa " +
-            " AND (:statusContrato IS NULL OR e.statusContrato = :statusContrato) " + // <-- This line was added
+            " AND (:status IS NULL OR e.statusContrato in :status) " + // <-- This line was added
             " AND ( (:criteria IS NULL OR :criteria = '') OR " +
             " (LOWER(e.numeroContrato) LIKE LOWER(CONCAT('%', :criteria, '%')) ) OR " +
             " (LOWER(e.cliente.nome) LIKE LOWER(CONCAT('%', :criteria, '%')) ) OR " +
@@ -36,7 +37,7 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
     })
     Optional<Page<Contrato>> findByFiltro(@Param("criteria") String filtro,
                                           @Param("idEmpresa") Long idEmpresa,
-                                          @Param("statusContrato") StatusContrato statusContrato, // <-- @Param added
+                                          @Param("status") List<StatusContrato> status, // <-- @Param added
                                           Pageable pageable);
 
     @Query(value = "SELECT e FROM Contrato e " +

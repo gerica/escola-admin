@@ -122,7 +122,7 @@ public class ContratoInitializer {
     private List<Turma> getExistingTurmas(Long idEmpresa) {
         log.info("Buscando turmas existentes para a empresa ID: {}", idEmpresa);
         // Ajuste o pageable para buscar algumas turmas (ex: as 5 primeiras)
-        Optional<Page<Turma>> byFiltro = turmaService.findByFiltro("", idEmpresa, pageableHelp.getPageable(0, 5, new ArrayList<>()));
+        Optional<Page<Turma>> byFiltro = turmaService.findByFiltro("", Collections.emptyList(), idEmpresa, pageableHelp.getPageable(0, 5, new ArrayList<>()));
         return byFiltro.map(Page::getContent).orElse(Collections.emptyList());
     }
 

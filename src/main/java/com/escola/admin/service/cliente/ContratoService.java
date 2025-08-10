@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 public interface ContratoService {
@@ -20,7 +21,7 @@ public interface ContratoService {
 
     Mono<Void> saveModelo(ContratoModeloRequest request);
 
-    Optional<Page<Contrato>> findByFiltro(String filtro, Long idEmpresa, StatusContrato statusContrato, Pageable pageable);
+    Optional<Page<Contrato>> findByFiltro(String filtro, Long idEmpresa, List<StatusContrato> statusContrato, Pageable pageable);
 
     Mono<Contrato> findById(Long id);
 

@@ -1,11 +1,13 @@
 package com.escola.admin.service.auxiliar;
 
+import com.escola.admin.model.entity.auxiliar.StatusTurma;
 import com.escola.admin.model.entity.auxiliar.Turma;
 import com.escola.admin.model.request.auxiliar.TurmaRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface TurmaService {
@@ -14,7 +16,7 @@ public interface TurmaService {
 
     Mono<Turma> findById(Long id);
 
-    Optional<Page<Turma>> findByFiltro(String filtro, Long idEmpresa, Pageable pageable);
+    Optional<Page<Turma>> findByFiltro(String filtro, List<StatusTurma> status, Long idEmpresa, Pageable pageable);
 
     Mono<Void> deleteById(Long id);
 

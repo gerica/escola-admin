@@ -5,6 +5,7 @@ import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Parametro;
 import com.escola.admin.model.entity.auxiliar.Curso;
 import com.escola.admin.model.entity.auxiliar.Matricula;
+import com.escola.admin.model.entity.auxiliar.StatusTurma;
 import com.escola.admin.model.entity.cliente.Cliente;
 import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.entity.cliente.StatusContrato;
@@ -34,6 +35,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -180,8 +182,9 @@ public class ContratoServiceImpl implements ContratoService {
     }
 
     @Override
-    public Optional<Page<Contrato>> findByFiltro(String filtro, Long idEmpresa, StatusContrato statusContrato, Pageable pageable) {
-        return repository.findByFiltro(filtro, idEmpresa, statusContrato, pageable);
+    public Optional<Page<Contrato>> findByFiltro(String filtro, Long idEmpresa, List<StatusContrato> status, Pageable pageable) {
+        List<StatusContrato> statusParaFiltro = (status != null && status.isEmpty()) ? null : status;
+        return repository.findByFiltro(filtro, idEmpresa, statusParaFiltro, pageable);
     }
 
     @Override

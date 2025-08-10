@@ -72,7 +72,7 @@ public class AuxiliarInitializer {
         }
         Empresa empresa = empresaParaVinculo.get();
 
-        Optional<Page<Turma>> byFiltro = turmaService.findByFiltro("", empresa.getId(), pageableHelp.getPageable(0, 1, new ArrayList<>()));
+        Optional<Page<Turma>> byFiltro = turmaService.findByFiltro("", Collections.emptyList(), empresa.getId(), pageableHelp.getPageable(0, 1, new ArrayList<>()));
         if (byFiltro.isPresent() && !byFiltro.get().getContent().isEmpty()) {
             log.info("Turmas já cadastradas...");
             return;

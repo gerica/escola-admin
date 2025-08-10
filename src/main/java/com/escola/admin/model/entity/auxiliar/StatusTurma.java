@@ -5,5 +5,6 @@ public enum StatusTurma {
     INATIVA,
     LOTADA,
     EM_FORMACAO,
-    CANCELADA
+    CANCELADA,
+    CONCLUIDA,
 }

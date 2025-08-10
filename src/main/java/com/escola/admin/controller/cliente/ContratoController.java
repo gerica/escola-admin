@@ -59,7 +59,7 @@ public class ContratoController {
     @PreAuthorize("isAuthenticated()")
     public Mono<Page<ContratoResponse>> fetchAllContratos(
             @Argument String filtro,
-            @Argument StatusContrato statusContrato,
+            @Argument List<StatusContrato> status,
             @Argument int page,
             @Argument int size,
             @Argument(name = "sort") List<SortInput> sortRequests,
@@ -72,7 +72,7 @@ public class ContratoController {
 
         Pageable pageable = pageableHelp.getPageable(page, size, sortRequests);
 
-        return Mono.fromCallable(() -> contratoService.findByFiltro(filtro, usuarioAutenticado.getEmpresaIdFromToken(), statusContrato, pageable)
+        return Mono.fromCallable(() -> contratoService.findByFiltro(filtro, usuarioAutenticado.getEmpresaIdFromToken(), status, pageable)
                 .map(usuarioPage -> usuarioPage.map(contratoMapper::toResponse))
                 .orElse(Page.empty(pageable)));
     }
