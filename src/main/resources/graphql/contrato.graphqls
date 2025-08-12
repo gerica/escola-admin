@@ -9,7 +9,7 @@ input ContratoRequest {
     statusContrato: String!
     descricao: String
     termosCondicoes: String
-    dataAssinatura: Date
+    dataAssinatura: DateTime
     periodoPagamento: String
     dataProximoPagamento: Date
     observacoes: String

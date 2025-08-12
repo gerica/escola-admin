@@ -39,25 +39,13 @@ public class ContaReceberServiceImpl implements ContaReceberService {
     ContaReceberMapper mapper;
     ContratoService contratoService;
 
-    public static void main(String[] args) {
-        // É uma boa prática criar BigDecimal a partir de String para evitar imprecisões de ponto flutuante.
-        BigDecimal valorTotal = new BigDecimal("1903.10");
-        BigDecimal valorMensalidadeCurso = new BigDecimal("500");
+    private static BigDecimal getValorASerPago(ContaReceber existingEntity) {
+        BigDecimal fatorDesconto = existingEntity.getDesconto().divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
+        BigDecimal valorDoDesconto = existingEntity.getValorTotal().multiply(fatorDesconto);
 
-        // Primeiro, realizamos a divisão especificando a escala (casas decimais) e o arredondamento.
-        int casasDecimais = 4;
-        RoundingMode modoArredondamento = RoundingMode.DOWN; // Trunca o resultado, não arredonda para cima.
-
-        BigDecimal resultadoCompleto = valorTotal.divide(valorMensalidadeCurso, casasDecimais, modoArredondamento);
-        System.out.println("Resultado da divisão com 4 casas: " + resultadoCompleto); // Resultado: 3.8062
-
-        // Para pegar a parte inteira a partir do resultado completo
-        BigDecimal parteInteiraDoResultado = new BigDecimal(resultadoCompleto.toBigInteger());
-        System.out.println("Parte inteira do resultado: " + parteInteiraDoResultado); // Resultado: 3
-
-        // Para pegar a parte fracionária, subtraímos a parte inteira do total
-        BigDecimal parteFracionaria = resultadoCompleto.subtract(parteInteiraDoResultado);
-        System.out.println("Parte fracionária (com " + casasDecimais + " dígitos): " + parteFracionaria); // Resultado: 0.8062
+        // 2. Calcula o valor final a ser pago, com o desconto aplicado e arredondado para 2 casas decimais (padrão para moeda).
+        return existingEntity.getValorTotal().subtract(valorDoDesconto)
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     @Override
@@ -220,14 +208,35 @@ public class ContaReceberServiceImpl implements ContaReceberService {
                 .map(existingEntity -> {
                     log.info("Atualizando contrato existente com ID: {}", existingEntity.getId());
                     mapper.updateEntity(request, existingEntity);
+                    alterarStatusParaPago(existingEntity);
                     return existingEntity;
                 })
                 .switchIfEmpty(Mono.defer(() -> {
                     log.info("Criando nova conta a receber para o contrato '{}'", contrato.getId());
                     ContaReceber entity = mapper.toEntity(request);
                     entity.setContrato(contrato);
+                    entity.setStatus(StatusContaReceber.ABERTA);
                     return Mono.just(entity);
                 }));
+    }
+
+
+    private void alterarStatusParaPago(ContaReceber existingEntity) {
+        // A conta é considerada PAGA se o valor pago for maior ou igual ao valor total.
+        if (existingEntity.getValorPago() != null && existingEntity.getValorTotal() != null && existingEntity.getDesconto() != null) {
+
+            // 1. Calcula o fator de desconto de forma segura (ex: 10% -> 0.10)
+            //    Usamos 4 casas de precisão para o fator, o que é suficiente para a maioria dos casos.
+            BigDecimal valorASerPago = getValorASerPago(existingEntity);
+
+            // 3. Compara o valor pago com o valor que DEVERIA ser pago (já com o desconto).
+            //    A comparação `compareTo >= 0` significa "valorPago é maior ou igual a valorASerPago".
+            if (existingEntity.getValorPago().compareTo(valorASerPago) >= 0) {
+                existingEntity.setStatus(StatusContaReceber.PAGA);
+            } else {
+                existingEntity.setStatus(StatusContaReceber.ABERTA);
+            }
+        }
     }
 
     private Mono<ContaReceber> persist(ContaReceber entity) {

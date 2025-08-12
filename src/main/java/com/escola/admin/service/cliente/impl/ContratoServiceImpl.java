@@ -5,7 +5,6 @@ import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Parametro;
 import com.escola.admin.model.entity.auxiliar.Curso;
 import com.escola.admin.model.entity.auxiliar.Matricula;
-import com.escola.admin.model.entity.auxiliar.StatusTurma;
 import com.escola.admin.model.entity.cliente.Cliente;
 import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.entity.cliente.StatusContrato;
@@ -342,6 +341,7 @@ public class ContratoServiceImpl implements ContratoService {
                 .map(existingEntity -> {
                     log.info("Atualizando contrato existente com ID: {}", existingEntity.getId());
                     mapper.updateEntity(request, existingEntity);
+                    alterarStatusAtivo(existingEntity);
                     return existingEntity;
                 })
                 .switchIfEmpty(Mono.defer(() -> {
@@ -359,6 +359,12 @@ public class ContratoServiceImpl implements ContratoService {
                     entity.setNumeroContrato(context.matricula.getCodigo());
                     return Mono.just(entity);
                 }));
+    }
+
+    private void alterarStatusAtivo(Contrato contrato) {
+        if (contrato.getDataAssinatura() != null) {
+            contrato.setStatusContrato(StatusContrato.ATIVO);
+        }
     }
 
     private Mono<Contrato> persist(Contrato entity) {
@@ -430,7 +436,6 @@ public class ContratoServiceImpl implements ContratoService {
                         .switchIfEmpty(Mono.error(new BaseException("Contrato com ID " + id + " não encontrada para atualização.")))
                 )
                 .map(existingEntity -> {
-                    log.info("Atualizando contrato existente com ID: {}", existingEntity.getId());
                     existingEntity.setContratoDoc(request.contratoDoc());
                     return existingEntity;
                 });

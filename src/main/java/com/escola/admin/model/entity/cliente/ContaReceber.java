@@ -48,7 +48,7 @@ public class ContaReceber {
     @Column(name = "data_vencimanto", nullable = false, updatable = false)
     LocalDate dataVencimento;
 
-    @Column(name = "data_pagamento", updatable = false)
+    @Column(name = "data_pagamento")
     LocalDate dataPagamento;
 
     @Column(name = "observacoes", columnDefinition = "TEXT")
