@@ -1,5 +1,6 @@
 package com.escola.admin.repository.auxiliar;
 
+import com.escola.admin.model.entity.auxiliar.Curso;
 import com.escola.admin.model.entity.auxiliar.StatusTurma;
 import com.escola.admin.model.entity.auxiliar.Turma;
 import org.springframework.data.domain.Page;
@@ -30,4 +31,10 @@ public interface TurmaRepository extends CrudRepository<Turma, Long> {
             " JOIN FETCH t.empresa e" +
             " where t.id = :id")
     Optional<Turma> findByIdAndLoadCursoAndEmpresa(@Param("id") Long id);
+
+    @Query("SELECT COUNT(t) FROM Turma t " +
+            "WHERE t.curso = :curso " +
+            "AND t.anoPeriodo = :anoPeriodo " +
+            "AND (LOWER(FUNCTION('TO_CHAR', t.dataInicio, 'YYYY')) LIKE LOWER(CONCAT('%', :ano, '%')))")
+    Long countByCursoAndAnoPeriodoAndAno(@Param("curso") Curso curso, @Param("anoPeriodo") String anoPeriodo, @Param("ano") int year);
 }

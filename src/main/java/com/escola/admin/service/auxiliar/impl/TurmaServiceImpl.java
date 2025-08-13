@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -200,7 +201,7 @@ public class TurmaServiceImpl implements TurmaService {
                 .map(existingEntity -> {
                     log.info("Atualizando turma existente com ID: {}", existingEntity.getId());
                     mapper.updateEntity(request, existingEntity);
-                    existingEntity.setCurso(context.curso);     // Associa o curso
+                    existingEntity.setCurso(context.curso);
                     return existingEntity;
                 })
                 .switchIfEmpty(Mono.defer(() -> {
@@ -208,12 +209,30 @@ public class TurmaServiceImpl implements TurmaService {
                     Turma novaTurma = mapper.toEntity(request);
                     novaTurma.setEmpresa(context.empresa);
                     novaTurma.setCurso(context.curso);
-                    return Mono.just(novaTurma);
+                    return gerarCodigoDaTurma(context.curso, novaTurma.getAnoPeriodo(), novaTurma.getDataInicio())
+                            .flatMap(codigo -> {
+                                novaTurma.setCodigo(codigo);
+                                return Mono.just(novaTurma);
+                            });
                 }));
     }
 
     private Mono<Turma> persist(Turma entity) {
         return Mono.fromCallable(() -> repository.save(entity)).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private Mono<String> gerarCodigoDaTurma(Curso curso, String anoPeriodo, LocalDate dataInicio) {
+        String cursoAbreviado = curso.getNome().substring(0, 3).toUpperCase();
+        String periodoAbreviado = anoPeriodo.substring(0, 1).toUpperCase();
+        String anoAbreviado = String.valueOf(dataInicio.getYear()).substring(2);
+
+        return Mono.fromCallable(() -> repository.countByCursoAndAnoPeriodoAndAno(curso, anoPeriodo, dataInicio.getYear()))
+                .map(proximaSequencia -> {
+                    String sequenciaFormatada = String.format("%02d", proximaSequencia + 1);
+                    // 5. Monta o código final
+                    return String.format("%s-%s-%s-%s", cursoAbreviado, periodoAbreviado, anoAbreviado, sequenciaFormatada);
+                });
+
     }
 
     private record EntitiesContext(Empresa empresa, Curso curso) {
