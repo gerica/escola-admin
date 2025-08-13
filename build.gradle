@@ -63,6 +63,12 @@ dependencies {
 	// SDK oficial do Google para interagir com a API do Gemini.
 	implementation 'com.google.genai:google-genai:1.0.0'
 
+	// iText 7 Core
+	implementation 'com.itextpdf:itext7-core:7.1.18' // Verifique a versão mais recente
+
+	// Módulo html2pdf para a conversão de HTML
+	implementation 'com.itextpdf:html2pdf:3.0.1' // Verifique a versão mais recente
+
 	// --- Code Generation & Utilities ---
 	// Reduz código boilerplate (getters, setters, construtores) através de anotações.
 	compileOnly 'org.projectlombok:lombok'

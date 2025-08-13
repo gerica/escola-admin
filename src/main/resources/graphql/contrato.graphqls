@@ -50,6 +50,11 @@ type ContratoResponsePage {
     empty: Boolean!
 }
 
+type  ContratoBase64Response{
+    nomeArquivo: String!
+    conteudoBase64: String
+}
+
 extend type Query {
     fetchAllContratos(
         filtro: String
@@ -61,6 +66,7 @@ extend type Query {
 
     fetchById(id: ID): ContratoResponse!
     fetchContratoByIdMatricula(id: ID): ContratoResponse!
+    downloadDocContrato(id: ID!): ContratoBase64Response!
 }
 
 extend type Mutation {

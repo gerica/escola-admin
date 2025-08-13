@@ -11,8 +11,10 @@ import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.mapper.cliente.ContratoMapper;
 import com.escola.admin.model.request.cliente.ContratoModeloRequest;
 import com.escola.admin.model.request.cliente.ContratoRequest;
+import com.escola.admin.model.response.cliente.ContratoBase64Response;
 import com.escola.admin.repository.cliente.ContratoRepository;
 import com.escola.admin.service.EmpresaService;
+import com.escola.admin.service.ItextPdfConverterService;
 import com.escola.admin.service.ParametroService;
 import com.escola.admin.service.auxiliar.CursoService;
 import com.escola.admin.service.auxiliar.MatriculaService;
@@ -30,6 +32,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -54,6 +57,7 @@ public class ContratoServiceImpl implements ContratoService {
     EmpresaService empresaService;
     MatriculaService matriculaService;
     CursoService cursoService;
+    ItextPdfConverterService itextPdfConverterService;
 //    ArtificalInteligenceService chatgpt;
     //    ArtificalInteligenceService gemini;
 
@@ -455,6 +459,33 @@ public class ContratoServiceImpl implements ContratoService {
                 .doOnError(e -> log.error("Falha ao obter valor da mensalidade para o contrato {}: {}", idContrato, e.getMessage()));
     }
 
+    @Override
+    public Mono<ContratoBase64Response> downloadDocContrato(Long id) {
+        return Mono.fromCallable(() -> repository.findById(id).orElseThrow(() -> new BaseException("Anexo não encontrado.")))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(entity -> {
+                    log.info("Iniciando download do documento do contrato com ID: {}", entity.getId());
+                    if (entity.getContratoDoc() == null) {
+                        return Mono.error(new BaseException("O contrato não possui documento."));
+                    }
+                    try {
+                        // Tenta a conversão, que pode lançar uma IOException
+                        var content = itextPdfConverterService.convertHtmlToPdfBase64(entity.getContratoDoc());
+
+                        // Se a conversão for bem-sucedida, retorna o Mono com o sucesso
+                        return Mono.just(ContratoBase64Response.builder()
+                                .conteudoBase64(content)
+                                .nomeArquivo("Contrato-%s".formatted(entity.getNumeroContrato()))
+                                .build());
+
+                    } catch (IOException e) {
+                        log.error("Falha ao converter HTML para PDF para o contrato {}: {}", entity.getNumeroContrato(), e.getMessage());
+                        return Mono.error(new BaseException("Erro ao gerar o PDF do contrato.", e));
+                    }
+                })
+                .doOnSuccess(v -> log.info("Download do documento do contrato concluído com sucesso."))
+                .doOnError(e -> log.error("Falha ao baixar anexo: {}", e.getMessage(), e));
+    }
 
     private record EntitiesContext(Matricula matricula, Empresa empresa
     ) {

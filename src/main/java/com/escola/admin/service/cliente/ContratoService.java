@@ -6,6 +6,7 @@ import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.request.cliente.ContratoModeloRequest;
 import com.escola.admin.model.request.cliente.ContratoRequest;
+import com.escola.admin.model.response.cliente.ContratoBase64Response;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Mono;
@@ -38,4 +39,6 @@ public interface ContratoService {
     Mono<Void> deleteByIdMatricula(Long id);
 
     Mono<BigDecimal> getValorMensalidadePorContratoId(Long idContrato);
+
+    Mono<ContratoBase64Response> downloadDocContrato(Long id);
 }

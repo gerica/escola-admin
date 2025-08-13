@@ -8,6 +8,7 @@ import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.mapper.cliente.ContratoMapper;
 import com.escola.admin.model.request.cliente.ContratoModeloRequest;
 import com.escola.admin.model.request.cliente.ContratoRequest;
+import com.escola.admin.model.response.cliente.ContratoBase64Response;
 import com.escola.admin.model.response.cliente.ContratoResponse;
 import com.escola.admin.service.cliente.ContratoService;
 import lombok.AccessLevel;
@@ -102,6 +103,13 @@ public class ContratoController {
         log.info("Executando parse contrato com o id: {}", id);
         return contratoService.parseContrato(id)
                 .map(contratoMapper::toResponse) // Se o Optional contiver um valor, aplica o mapper
+                .onErrorResume(BaseException.class, Mono::error);
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    public Mono<ContratoBase64Response> downloadDocContrato(@Argument Long id) {
+        return contratoService.downloadDocContrato(id)
                 .onErrorResume(BaseException.class, Mono::error);
     }
 
