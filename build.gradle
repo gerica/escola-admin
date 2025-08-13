@@ -56,6 +56,11 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
 
+	implementation 'com.openhtmltopdf:openhtmltopdf-core:1.0.10'
+	implementation 'com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10'
+	implementation 'com.openhtmltopdf:openhtmltopdf-slf4j:1.0.10'
+	implementation 'org.jsoup:jsoup:1.17.2'
+
 	// --- GraphQL ---
 	// Adiciona suporte para tipos escalares estendidos (ex: Date, Long) no GraphQL.
 	implementation 'com.graphql-java:graphql-java-extended-scalars:22.0'

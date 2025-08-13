@@ -16,6 +16,7 @@ import com.escola.admin.repository.cliente.ContratoRepository;
 import com.escola.admin.service.EmpresaService;
 import com.escola.admin.service.ItextPdfConverterService;
 import com.escola.admin.service.ParametroService;
+import com.escola.admin.service.PdfConverterService;
 import com.escola.admin.service.auxiliar.CursoService;
 import com.escola.admin.service.auxiliar.MatriculaService;
 import com.escola.admin.service.cliente.ArtificalInteligenceService;
@@ -58,6 +59,7 @@ public class ContratoServiceImpl implements ContratoService {
     MatriculaService matriculaService;
     CursoService cursoService;
     ItextPdfConverterService itextPdfConverterService;
+    PdfConverterService pdfConverterService;
 //    ArtificalInteligenceService chatgpt;
     //    ArtificalInteligenceService gemini;
 
@@ -470,7 +472,8 @@ public class ContratoServiceImpl implements ContratoService {
                     }
                     try {
                         // Tenta a conversão, que pode lançar uma IOException
-                        var content = itextPdfConverterService.convertHtmlToPdfBase64(entity.getContratoDoc());
+//                        var content = itextPdfConverterService.convertHtmlToPdfBase64(entity.getContratoDoc());
+                        var content = pdfConverterService.convertHtmlToPdfBase64(entity.getContratoDoc());
 
                         // Se a conversão for bem-sucedida, retorna o Mono com o sucesso
                         return Mono.just(ContratoBase64Response.builder()
