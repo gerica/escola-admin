@@ -10,7 +10,7 @@ public interface ParametroService {
     String CHAVE_CONTRATO_MODELO_PADRAO = "CHAVE_CONTRATO_MODELO_PADRAO";
     String CHAVE_CONTRATO_MODELO_PADRAO_MAP = "modeloContrato";
 
-    Mono<Parametro> salvar(ParametroRequest request);
+    Mono<Parametro> salvar(ParametroRequest request, Long empresaIdFromToken);
 
-    Mono<Parametro> findByChave(String chave);
+    Mono<Parametro> findByChave(String chave, Long empresaIdFromToken);
 }

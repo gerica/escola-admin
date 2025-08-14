@@ -124,7 +124,7 @@ public class MatriculaInitializer {
             return;
         }
 
-        matriculasToCreate.forEach(request -> matriculaService.save(request)
+        matriculasToCreate.forEach(request -> matriculaService.save(request, empresa.getId())
                 .doOnSuccess(matricula -> log.info("Matrícula salva com sucesso."))
                 .doOnError(e -> log.error("Falha ao salvar matrícula para Turma ID:{} Cliente ID:{} Dependente ID:{}: {}",
                         request.idTurma(), request.idCliente(), request.idClienteDependente(), e.getMessage()))

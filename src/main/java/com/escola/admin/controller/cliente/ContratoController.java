@@ -99,9 +99,14 @@ public class ContratoController {
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
-    public Mono<ContratoResponse> parseContrato(@Argument Long id) {
+    public Mono<ContratoResponse> parseContrato(@Argument Long id, Authentication authentication) {
         log.info("Executando parse contrato com o id: {}", id);
-        return contratoService.parseContrato(id)
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
+
+        return contratoService.parseContrato(id, usuarioAutenticado.getEmpresaIdFromToken())
                 .map(contratoMapper::toResponse) // Se o Optional contiver um valor, aplica o mapper
                 .onErrorResume(BaseException.class, Mono::error);
     }

@@ -23,7 +23,7 @@ public class ParametroSerivceImpl implements ParametroService {
     ObjectMapper objectMapper; // O Spring Boot fornece um bean pré-configurado
 
     @Override
-    public Mono<Parametro> salvar(ParametroRequest request) {
+    public Mono<Parametro> salvar(ParametroRequest request, Long empresaIdFromToken) {
         // 1. Converte o objeto de request inteiro em um Map.
         Map<String, Object> dados = objectMapper.convertValue(request, new TypeReference<>() {
         });
@@ -33,12 +33,13 @@ public class ParametroSerivceImpl implements ParametroService {
 
         // 3. Busca um parâmetro existente ou cria um novo de forma reativa.
         //    Usamos flatMap para trabalhar com o resultado do Mono<Parametro>
-        return this.findByChave(request.getChave())
+
+        return this.findByChave(request.getChave(), empresaIdFromToken)
                 .defaultIfEmpty(new Parametro()) // Se o Mono for vazio (parâmetro não encontrado), emite um novo Parametro
                 .flatMap(parametro -> {
                     // Agora 'parametro' nunca será nulo aqui.
                     // Atualiza os dados da entidade
-                    parametro.setChave(request.getChave());
+                    parametro.setChave(getChave(request.getChave(), empresaIdFromToken));
                     parametro.setJsonData(dados);
 
                     // O repository.save() provavelmente retorna um Parametro salvo
@@ -50,8 +51,12 @@ public class ParametroSerivceImpl implements ParametroService {
     }
 
     @Override
-    public Mono<Parametro> findByChave(String chave) {
-        return Mono.justOrEmpty(repository.findByChave(chave));
+    public Mono<Parametro> findByChave(String chave, Long empresaIdFromToken) {
+        return Mono.justOrEmpty(repository.findByChave(getChave(chave, empresaIdFromToken)));
+    }
+
+    private String getChave(String chave, Long empresaIdFromToken) {
+        return "%s-%s".formatted(chave, empresaIdFromToken);
     }
 
 }

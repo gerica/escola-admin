@@ -2,6 +2,7 @@ package com.escola.admin.service.auxiliar.impl;
 
 import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.auxiliar.Matricula;
+import com.escola.admin.model.entity.auxiliar.StatusMatricula;
 import com.escola.admin.model.entity.auxiliar.Turma;
 import com.escola.admin.model.entity.cliente.Cliente;
 import com.escola.admin.model.entity.cliente.ClienteDependente;
@@ -56,7 +57,7 @@ public class MatriculaServiceImpl implements MatriculaService {
 
     @Override
     @Transactional
-    public Mono<Void> save(MatriculaRequest request) {
+    public Mono<Void> save(MatriculaRequest request, Long empresaIdFromToken) {
         log.info("Iniciando operação de salvar/atualizar matrícula. Request: {}", request);
 
         return validateMatriculaRequest(request) // Step 1: Validate the incoming request
@@ -66,7 +67,7 @@ public class MatriculaServiceImpl implements MatriculaService {
                 .flatMap(context -> {
                     if (context.isNew()) {
                         log.info("Matrícula é nova. Criando contrato para ID: {}", context.matricula().getId());
-                        return contratoService.criarContrato(context.matricula());
+                        return contratoService.criarContrato(context.matricula(), empresaIdFromToken);
                     } else {
                         log.info("Matrícula é uma atualização. Pulando a criação de contrato.");
                         return Mono.just(context.matricula());
@@ -340,6 +341,19 @@ public class MatriculaServiceImpl implements MatriculaService {
         return Mono.fromRunnable(() -> repository.delete(entity))
                 .doOnSuccess(v -> log.info("Matricula com ID {} excluído com sucesso pela entidade.", entity != null ? entity.getId() : "null"))
                 .doOnError(e -> log.error("Erro ao excluir turma pela entidade {}: {}", entity != null ? entity.getId() : "null", e.getMessage(), e)).then();
+    }
+
+    @Override
+    public Mono<Void> alterarStatus(Matricula matricula, StatusMatricula statusMatricula) {
+        return findById(matricula.getId())
+                .flatMap(mat -> {
+                    mat.setStatus(statusMatricula);
+                    // Usa Mono.fromCallable para executar a operação bloqueante em um thread separado
+                    return Mono.fromCallable(() -> repository.save(mat));
+                })
+                .doOnSuccess(v -> log.info("Matricula com ID {} salva com sucesso", matricula.getId()))
+                .doOnError(e -> log.error("Erro ao salvar matricula pela entidade {}: {}", matricula.getId(), e.getMessage(), e))
+                .then();
     }
 
     // 2. Data structure to hold the fetched entities

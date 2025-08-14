@@ -82,11 +82,17 @@ public class CursoController {
             @Argument String filtro,
             @Argument int page,
             @Argument int size,
-            @Argument(name = "sort") List<SortInput> sortRequests) {
+            @Argument(name = "sort") List<SortInput> sortRequests,
+            Authentication authentication) {
+
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
 
         Pageable pageable = pageableHelp.getPageable(page, size, sortRequests);
 
-        return Mono.fromCallable(() -> cursoService.findByFiltro(filtro, pageable)
+        return Mono.fromCallable(() -> cursoService.findByFiltro(filtro, usuarioAutenticado.getEmpresaIdFromToken(), pageable)
                 .map(cursoPage -> cursoPage.map(cursoMapper::toResponse))
                 .orElse(Page.empty(pageable)));
     }

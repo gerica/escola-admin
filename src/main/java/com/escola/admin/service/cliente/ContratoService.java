@@ -28,11 +28,11 @@ public interface ContratoService {
 
     Optional<Void> deleteById(Integer id);
 
-    Mono<Contrato> parseContrato(Long idContrato);
+    Mono<Contrato> parseContrato(Long idContrato, Long empresaIdFromToken);
 
     Long count();
 
-    Mono<Matricula> criarContrato(Matricula matricula);
+    Mono<Matricula> criarContrato(Matricula matricula, Long empresaIdFromToken);
 
     Mono<Contrato> findByIdMatricula(Long id);
 

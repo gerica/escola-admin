@@ -8,11 +8,14 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.helper.W3CDom;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
 
 @Service
@@ -30,9 +33,9 @@ public class PdfConverterServiceImpl implements PdfConverterService {
     public String convertHtmlToPdfBase64(String htmlContent) throws IOException {
 
         ByteArrayOutputStream os = new ByteArrayOutputStream();
-        String cleanedHtmlContent = htmlContent.replaceAll("&nbsp;", " ");
+//        String cleanedHtmlContent = htmlContent.replaceAll("&nbsp;", " ");
 
-        String styledHtmlContent = injectCssIntoHtml(cleanedHtmlContent);
+        String styledHtmlContent = injectCssIntoHtml(htmlContent);
         try {
             // 1. Analisar a string HTML para um objeto Document usando Jsoup
             // Jsoup é tolerante com HTML incompleto e entidades como &nbsp;
@@ -66,25 +69,27 @@ public class PdfConverterServiceImpl implements PdfConverterService {
         if (htmlContent.contains("<body>")) {
             return htmlContent.replaceFirst("<body>", "<head>" + styleBlock + "</head><body>");
         }
-        return "<html><head>" + styleBlock + "</head><body> " + htmlContent + " </body></html>";
+        return "<html><head>" + styleBlock + "</head><body class=\"ql-editor\"> " + htmlContent + " </body></html>";
     }
 
-    private  String getStyleBlock() {
-        String cssContent = """
-                 body {
-                    margin: 30px;
-                    font-family: sans-serif;
-                }
-                .ql-align-center {
-                    margin: 0 auto;
-                    text-align: center;
-                }
-                .ql-align-right {
-                    text-align: right;
-                }
+    private String getStyleBlock() {
+        try {
+            // Cria um ClassPathResource para o arquivo CSS
+            ClassPathResource resource = new ClassPathResource("static/quill.snow.css");
 
-                """;
-        // Cria a tag <style> com o conteúdo CSS
-        return "<style>" + cssContent + "</style>";
+            // Obtém o Path do recurso
+            Path cssPath = resource.getFile().toPath();
+
+            // Lê todo o conteúdo do arquivo como uma String
+            String cssContent = Files.readString(cssPath);
+
+            // Retorna a tag <style> com o conteúdo
+            return "<style>" + cssContent + "</style>";
+        } catch (IOException e) {
+            // Em caso de erro na leitura do arquivo, imprima o stack trace para depuração
+            e.printStackTrace();
+            // Retorna uma string vazia ou um valor padrão para evitar erros
+            return "";
+        }
     }
 }

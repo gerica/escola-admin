@@ -5,6 +5,7 @@ import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Parametro;
 import com.escola.admin.model.entity.auxiliar.Curso;
 import com.escola.admin.model.entity.auxiliar.Matricula;
+import com.escola.admin.model.entity.auxiliar.StatusMatricula;
 import com.escola.admin.model.entity.cliente.Cliente;
 import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.entity.cliente.StatusContrato;
@@ -166,6 +167,7 @@ public class ContratoServiceImpl implements ContratoService {
         return getRequiredEntities(request) // Step 2: Fetch all necessary entities concurrently
                 .flatMap(context -> findOrCreate(request, context)) // Step 3: Find or create the Matricula entity
                 .flatMap(this::persist) // Step 4: Persist the Matricula
+                .flatMap(this::alterarStatusMatricula)
                 .doOnSuccess(savedEntity -> log.info("Contrato salvo com sucesso. ID: {}", savedEntity.getId()))
                 .doOnError(e -> log.error("Falha na operação de salvar contrato: {}", e.getMessage(), e))
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
@@ -241,10 +243,14 @@ public class ContratoServiceImpl implements ContratoService {
     }
 
     @Override
-    public Mono<Contrato> parseContrato(Long idContrato) {
+    public Mono<Contrato> parseContrato(Long idContrato, Long empresaIdFromToken) {
         return Mono.defer(() -> { // Mono.defer para garantir que a lógica seja executada apenas na subscrição
             try {
-                Mono<Parametro> parametroMono = parametroService.findByChave(CHAVE_CONTRATO_MODELO_PADRAO)
+//                Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+//                if (!(principal instanceof Usuario usuarioAutenticado)) {
+//                    return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+//                }
+                Mono<Parametro> parametroMono = parametroService.findByChave(CHAVE_CONTRATO_MODELO_PADRAO, empresaIdFromToken)
                         .switchIfEmpty(Mono.error(new BaseException("Não exsite nenhum modelo configurado!")));
                 Mono<Contrato> contratoOptionalMono = findById(idContrato);
 
@@ -272,7 +278,7 @@ public class ContratoServiceImpl implements ContratoService {
     }
 
     @Override
-    public Mono<Matricula> criarContrato(Matricula matricula) {
+    public Mono<Matricula> criarContrato(Matricula matricula, Long empresaIdFromToken) {
         if (matricula == null || (matricula.getCliente() == null && matricula.getClienteDependente() == null)) {
             return Mono.error(new IllegalArgumentException("A matrícula não é válida para a criação de um contrato."));
         }
@@ -299,7 +305,7 @@ public class ContratoServiceImpl implements ContratoService {
 
                     return Mono.fromCallable(() -> repository.save(novoContrato))
                             .subscribeOn(Schedulers.boundedElastic())
-                            .flatMap(this::recuperarModeloContrato)
+                            .flatMap(contrato -> this.recuperarModeloContrato(contrato, empresaIdFromToken))
                             .flatMap(contratoProcessado -> Mono.fromCallable(() -> repository.save(contratoProcessado)))
                             .thenReturn(matricula);
                 });
@@ -377,6 +383,13 @@ public class ContratoServiceImpl implements ContratoService {
         return Mono.fromCallable(() -> repository.save(entity)).subscribeOn(Schedulers.boundedElastic());
     }
 
+    private Mono<Contrato> alterarStatusMatricula(Contrato contrato) {
+        if (StatusContrato.ATIVO.equals(contrato.getStatusContrato())) {
+            return matriculaService.alterarStatus(contrato.getMatricula(), StatusMatricula.ATIVA).then(Mono.just(contrato));
+        }
+        return Mono.just(contrato);
+    }
+
     private Throwable handleDataIntegrityViolation(DataIntegrityViolationException e) {
         log.warn("Violação de integridade de dados ao salvar contato: {}", e.getMessage());
         String message = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
@@ -423,9 +436,9 @@ public class ContratoServiceImpl implements ContratoService {
         return Optional.empty();
     }
 
-    private Mono<Contrato> recuperarModeloContrato(Contrato contrato) {
+    private Mono<Contrato> recuperarModeloContrato(Contrato contrato, Long empresaIdFromToken) {
         return Mono.defer(() -> {
-            Mono<Parametro> parametroMono = parametroService.findByChave(CHAVE_CONTRATO_MODELO_PADRAO);
+            Mono<Parametro> parametroMono = parametroService.findByChave(CHAVE_CONTRATO_MODELO_PADRAO, empresaIdFromToken);
             return parametroMono
                     .flatMap(parametro -> {
                         converterComIA(contrato, parametro);

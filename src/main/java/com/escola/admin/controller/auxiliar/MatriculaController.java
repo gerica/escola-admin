@@ -3,6 +3,7 @@ package com.escola.admin.controller.auxiliar;
 import com.escola.admin.controller.help.PageableHelp;
 import com.escola.admin.controller.help.SortInput;
 import com.escola.admin.exception.BaseException;
+import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.auxiliar.MatriculaMapper;
 import com.escola.admin.model.request.auxiliar.MatriculaRequest;
 import com.escola.admin.model.response.auxiliar.MatriculaResponse;
@@ -16,6 +17,7 @@ import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
@@ -40,8 +42,12 @@ public class MatriculaController {
      */
     @MutationMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
-    public Mono<String> saveMatricula(@Argument MatriculaRequest request) {
-        return matriculaService.save(request)
+    public Mono<String> saveMatricula(@Argument MatriculaRequest request, Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
+        return matriculaService.save(request, usuarioAutenticado.getEmpresaIdFromToken())
                 .then(Mono.just("Operação realizada com sucesso."))
                 .switchIfEmpty(Mono.error(new BaseException("Não foi possível salvar turma. O serviço retornou um resultado vazio.")))
                 .onErrorResume(BaseException.class, Mono::error);
