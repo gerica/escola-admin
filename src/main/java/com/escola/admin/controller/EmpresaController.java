@@ -8,7 +8,9 @@ import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.EmpresaMapper;
 import com.escola.admin.model.request.EmpresaRequest;
+import com.escola.admin.model.request.FiltroRelatorioRequest;
 import com.escola.admin.model.response.EmpresaResponse;
+import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.service.EmpresaService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +57,13 @@ public class EmpresaController {
             @Argument(name = "sort") List<SortInput> sort) {
         Page<Empresa> entities = service.findByFiltro(filtro, pageableHelp.getPageable(page, size, sort)).orElse(Page.empty());
         return entities.map(mapper::toResponse);
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
+    public Mono<RelatorioBase64Response> downloadListaEmpesas(@Argument FiltroRelatorioRequest request) {
+        return service.emitirRelatorio(request)
+                .onErrorResume(BaseException.class, Mono::error);
     }
 
     @QueryMapping

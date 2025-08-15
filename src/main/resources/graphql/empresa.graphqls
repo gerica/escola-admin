@@ -46,6 +46,7 @@ extend type Query {
     ): EmpresaResponsePage!
     fetchByIdEmpresa(id: ID): EmpresaResponse!
     getInfoEmpresaUsuario: EmpresaResponse!
+    downloadListaEmpesas(request: FiltroRelatorioRequest!): RelatorioBase64Response
 }
 
 extend type Mutation {

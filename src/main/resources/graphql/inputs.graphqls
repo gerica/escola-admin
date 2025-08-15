@@ -19,3 +19,8 @@ type ImpersonationResponse {
      token: String!
      user: AuthenticationResponse!
 }
+
+input FiltroRelatorioRequest {
+     filtro: String
+     tipo: String
+}

@@ -4,9 +4,13 @@ import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.mapper.EmpresaMapper;
 import com.escola.admin.model.request.EmpresaRequest;
+import com.escola.admin.model.request.FiltroRelatorioRequest;
+import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.repository.EmpresaRepository;
 import com.escola.admin.repository.UsuarioRepository;
 import com.escola.admin.service.EmpresaService;
+import com.escola.admin.service.report.ReportService;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +33,7 @@ public class EmpresaServiceImpl implements EmpresaService {
     EmpresaRepository repository;
     UsuarioRepository usuarioRepository;
     EmpresaMapper mapper;
+    ReportService<Empresa> reportService;
 
     @Override
     @Transactional
@@ -64,7 +69,8 @@ public class EmpresaServiceImpl implements EmpresaService {
 
     @Override
     public Optional<Page<Empresa>> findByFiltro(String filtro, Pageable pageable) {
-        return repository.findByFiltro(filtro, pageable);
+        Pageable effectivePageable = (pageable != null) ? pageable : Pageable.unpaged();
+        return repository.findByFiltro(filtro, effectivePageable);
     }
 
     @Override
@@ -88,6 +94,29 @@ public class EmpresaServiceImpl implements EmpresaService {
         return Mono.fromCallable(() -> usuarioRepository.findEmpresaByUsuarioId(usuarioId))
                 // Desempacota o Optional para um Mono<Empresa> ou Mono.empty()
                 .flatMap(Mono::justOrEmpty);
+    }
+
+    public Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request) {
+        Optional<Page<Empresa>> optional = findByFiltro(request.filtro(), null);
+
+        if (optional.isPresent()) {
+            try {
+                ObjectNode jsonNodes = reportService.generateReport(request.tipo(), optional.get().getContent(), Empresa.class);
+
+                // Extrai os campos do ObjectNode e cria a resposta
+                String nomeArquivo = jsonNodes.get("filename").asText();
+                String conteudoBase64 = jsonNodes.get("content").asText();
+                RelatorioBase64Response response = new RelatorioBase64Response(nomeArquivo, conteudoBase64);
+
+                return Mono.just(response);
+            } catch (BaseException e) {
+                return Mono.error(e);
+            } catch (Exception e) {
+                return Mono.error(new RuntimeException("Erro ao processar o relatório", e));
+            }
+        }
+        // Caso a lista de empresas esteja vazia, retorna um Mono vazio ou um erro
+        return Mono.empty();
     }
 
 

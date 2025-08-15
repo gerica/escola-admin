@@ -21,3 +21,8 @@ type AuthenticationResponse{
     precisaAlterarSenha: Boolean
     empresa: EmpresaResponse
 }
+
+type RelatorioBase64Response{
+    nomeArquivo:String
+    conteudoBase64:String
+}
