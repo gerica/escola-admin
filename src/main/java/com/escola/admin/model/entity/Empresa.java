@@ -41,7 +41,7 @@ public class Empresa {
     @Column(nullable = false) // Endereço é obrigatório
     String endereco;
 
-    String logoUrl; // URL do logo da empresa, se houver
+    String logoUUID; // URL do logo da empresa, se houver
 
     @Column(nullable = false)
     @Builder.Default

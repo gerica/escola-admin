@@ -11,6 +11,7 @@ import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.repository.EmpresaRepository;
 import com.escola.admin.repository.UsuarioRepository;
 import com.escola.admin.service.EmpresaService;
+import com.escola.admin.service.FileStorageService;
 import com.escola.admin.service.report.ReportService;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.transaction.Transactional;
@@ -24,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.Optional;
 
@@ -37,21 +39,38 @@ public class EmpresaServiceImpl implements EmpresaService {
     UsuarioRepository usuarioRepository;
     EmpresaMapper mapper;
     ReportService<Empresa> reportService;
+    FileStorageService storageService;
+
+//    @Override
+//    @Transactional
+//    public Mono<Empresa> save(EmpresaRequest request) {
+//        Mono<Empresa> empresaMono = Mono.justOrEmpty(request.id())
+//                .flatMap(id -> Mono.fromCallable(() -> repository.findById(id)))
+//                .flatMap(Mono::justOrEmpty).map((existingEmpresa) -> {
+//                    mapper.updateEntity(request, existingEmpresa);
+//                    return existingEmpresa;
+//                })
+//                .switchIfEmpty(Mono.defer(() -> Mono.just(mapper.toEntity(request))));
+//
+//        return empresaMono.flatMap(uwp -> Mono.fromCallable(() -> repository.save(uwp)))
+//                .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
+//                .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException);
+//    }
 
     @Override
     @Transactional
     public Mono<Empresa> save(EmpresaRequest request) {
-        Mono<Empresa> empresaMono = Mono.justOrEmpty(request.id())
-                .flatMap(id -> Mono.fromCallable(() -> repository.findById(id)))
-                .flatMap(Mono::justOrEmpty).map((existingEmpresa) -> {
-                    mapper.updateEntity(request, existingEmpresa);
-                    return existingEmpresa;
-                })
-                .switchIfEmpty(Mono.defer(() -> Mono.just(mapper.toEntity(request))));
+        log.info("Salvar empresa: {}", request.nomeFantasia());
 
-        return empresaMono.flatMap(uwp -> Mono.fromCallable(() -> repository.save(uwp)))
+        return validateRequest(request)
+                .then(updateOrCreate(request))
+                .flatMap(empresa -> this.uploadFile(empresa, request))
+                .flatMap(this::persist)
+                .doOnSuccess(savedEntity -> log.info("Empresa salvo com sucesso. ID: {}", savedEntity.getId()))
+                .doOnError(e -> log.error("Falha na operação de salvar empresa: {}", e.getMessage(), e))
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
                 .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException);
+
     }
 
     @Override
@@ -128,6 +147,54 @@ public class EmpresaServiceImpl implements EmpresaService {
         return Mono.empty();
     }
 
+    private Mono<Void> validateRequest(EmpresaRequest request) {
+        if (request.nomeFantasia() == null || request.nomeFantasia().isBlank()) {
+            return Mono.error(new BaseException("O nome fantasia é obrigatório."));
+        }
+        if (request.razaoSocial() == null || request.razaoSocial().isBlank()) {
+            return Mono.error(new BaseException("A razão social é obrigatória."));
+        }
+        if (request.cnpj() == null || request.cnpj().isBlank()) {
+            return Mono.error(new BaseException("O CNPJ é obrigatório."));
+        }
+        if (request.email() == null || request.email().isBlank()) {
+            return Mono.error(new BaseException("O e-mail é obrigatório."));
+        }
+        if (request.endereco() == null || request.endereco().isBlank()) {
+            return Mono.error(new BaseException("O endereço é obrigatório."));
+        }
+
+        return Mono.empty(); // Retorna um Mono vazio para indicar sucesso
+    }
+
+    private Mono<Empresa> updateOrCreate(EmpresaRequest request) {
+        return Mono.justOrEmpty(request.id())
+                .flatMap(this::findById)
+                .map(existingEntity -> {
+                    log.info("Atualizando empresa existente com ID: {}", existingEntity.getId());
+                    mapper.updateEntity(request, existingEntity);
+                    return existingEntity;
+                })
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.info("Criando nova empersa '{}'", request.nomeFantasia());
+                    Empresa newEntity = mapper.toEntity(request);
+                    return Mono.just(newEntity);
+                }));
+    }
+
+    private Mono<Empresa> uploadFile(Empresa empresa, EmpresaRequest request) {
+        return storageService.saveFile(request.logoBase64())
+                .flatMap(uuid -> {
+                    log.info("uuid: {}", uuid);
+                    empresa.setLogoUUID(uuid);
+                    return Mono.just(empresa);
+                })
+                .doOnError(ex -> log.error("Falha ao salvar arquivo para {}: {}", empresa.getNomeFantasia(), ex.getMessage()));
+    }
+
+    private Mono<Empresa> persist(Empresa entity) {
+        return Mono.fromCallable(() -> repository.save(entity)).subscribeOn(Schedulers.boundedElastic());
+    }
 
     /**
      * Transforma uma DataIntegrityViolationException em uma BaseException mais amigável.

@@ -20,6 +20,7 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,6 +41,7 @@ public class MatriculaInitializer {
     MatriculaService matriculaService; // Serviço para Matricula
 
     @PostConstruct
+    @Transactional
     void carga() {
         log.info("<INIT> Carga matriculas");
         this.cargaMatriculas();
@@ -134,6 +136,7 @@ public class MatriculaInitializer {
         log.info("<END> Carga de dados de Matrículas concluída.");
     }
 
+    @Transactional
     private Optional<Empresa> getAnyExistingEmpresa() {
         log.info("Buscando uma empresa existente para referência para matrículas...");
         Optional<Page<Empresa>> byFiltro = empresaService.findByFiltro("", pageableHelp.getPageable(0, 1, new ArrayList<>()));

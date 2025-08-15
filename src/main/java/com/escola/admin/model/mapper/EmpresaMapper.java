@@ -28,6 +28,7 @@ public interface EmpresaMapper {
         return cnpj.replaceAll("(\\d{2})(\\d{3})(\\d{3})(\\d{4})(\\d{2})", "$1.$2.$3/$4-$5");
     }
 
+    @Mapping(target = "logoBase64", ignore = true)
     EmpresaResponse toResponse(Empresa entity);
 
     List<EmpresaResponse> toResponseList(List<Empresa> empresas);
@@ -36,11 +37,13 @@ public interface EmpresaMapper {
     @Mapping(target = "cnpj", source = "cnpj", qualifiedByName = "formatCNPJ")
     @Mapping(target = "dataCadastro", ignore = true)
     @Mapping(target = "dataAtualizacao", ignore = true)
+    @Mapping(target = "logoUUID", ignore = true)
     Empresa toEntity(EmpresaRequest request);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "dataCadastro", ignore = true)
     @Mapping(target = "dataAtualizacao", ignore = true)
+    @Mapping(target = "logoUUID", ignore = true)
     Empresa updateEntity(EmpresaRequest source, @MappingTarget Empresa target);
 
 }

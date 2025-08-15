@@ -13,6 +13,7 @@ import java.util.List;
 )
 public interface CursoMapper {
 
+    @Mapping(target = "empresa.logoBase64", ignore = true)
     CursoResponse toResponse(Curso entity);
 
     List<CursoResponse> toResponseList(List<Curso> entities);

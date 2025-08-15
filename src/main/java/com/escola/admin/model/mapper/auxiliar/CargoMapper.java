@@ -13,6 +13,7 @@ import java.util.List;
 )
 public interface CargoMapper {
 
+    @Mapping(target = "empresa.logoBase64", ignore = true)
     CargoResponse toResponse(Cargo entity);
 
     List<CargoResponse> toResponseList(List<Cargo> entities);

@@ -14,6 +14,7 @@ import java.util.List;
 public interface UsuarioMapper {
 
     @Mapping(target = "password", ignore = true)
+    @Mapping(target = "empresa.logoBase64", ignore = true)
     UsuarioResponse toResponse(Usuario entity);
 
     List<UsuarioResponse> toResponseList(List<Usuario> entities);

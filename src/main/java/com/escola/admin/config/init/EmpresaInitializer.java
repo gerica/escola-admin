@@ -11,7 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.Random;
 
@@ -21,7 +26,7 @@ import java.util.Random;
 @Slf4j
 public class EmpresaInitializer {
 
-    private static final int NUM_EMPRESAS_TO_CREATE = 25;
+    private static final int NUM_EMPRESAS_TO_CREATE = 2;
     EmpresaService service;
     private final Random random = new Random();
     PageableHelp pageableHelp;
@@ -51,6 +56,17 @@ public class EmpresaInitializer {
                 // Se for armazenado sem formatação, remova a chamada ao formatCnpj.
                 String formattedCnpj = formatCnpjForInitializer(rawCnpj); // Usa um método auxiliar para formatação
 
+                // URL da imagem a ser convertida
+                String imageUrl = "https://placehold.co/150x50/000/FFF?text=Logo" + i;
+                String logoBase64 = null;
+                try {
+                    // Chama o novo método para converter a imagem para Base64
+                    logoBase64 = convertImageUrlToBase64(imageUrl);
+                } catch (IOException e) {
+                    log.error("Erro ao converter imagem da URL '{}' para Base64: {}", imageUrl, e.getMessage());
+                    // Continua a criação da empresa, mas com a logo nula
+                }
+
                 EmpresaRequest request = new EmpresaRequest(
                         null,
                         nomeFantasia,
@@ -60,7 +76,7 @@ public class EmpresaInitializer {
                         String.format("%02d", random.nextInt(99)) + "9" + String.format("%08d", random.nextInt(100000000)),
                         "contato" + i + "@empresateste.com",
                         "Rua das Flores, " + i + ", Centro, Cidade Teste, Estado Teste",
-                        "https://placehold.co/150x50/000/FFF?text=Logo" + i,
+                        logoBase64,
                         true);
 
                 try {
@@ -74,6 +90,33 @@ public class EmpresaInitializer {
             } else {
                 log.info("Empresa '{}' já existe, pulando criação.", nomeFantasia);
             }
+        }
+    }
+
+    /**
+     * Converte uma imagem de uma URL para uma string Base64.
+     *
+     * @param imageUrl A URL da imagem.
+     * @return A string Base64 da imagem, incluindo o prefixo `data:image/...;base64,`.
+     * @throws IOException se houver um erro ao ler a imagem.
+     */
+    private String convertImageUrlToBase64(String imageUrl) throws IOException {
+        URL url = new URL(imageUrl);
+        try (InputStream is = url.openStream();
+             ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+            byte[] imageBytes = os.toByteArray();
+            String base64String = Base64.getEncoder().encodeToString(imageBytes);
+
+            // Para garantir que o frontend renderize corretamente, adicione o prefixo
+            // 'data:image/jpeg;base64,' ou 'data:image/png;base64,'.
+            // Como o placehold.co usa PNG por padrão para texto, vamos usar PNG.
+            return "data:image/png;base64," + base64String;
         }
     }
 

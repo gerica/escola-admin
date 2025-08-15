@@ -17,6 +17,7 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -38,6 +39,7 @@ public class ContratoInitializer {
     Random random = new Random();
     PageableHelp pageableHelp;
 
+    @Transactional
     public void carga() {
         log.info("Iniciando a verificação de dados (contrato) iniciais...");
 
@@ -112,6 +114,7 @@ public class ContratoInitializer {
         return periodos[random.nextInt(periodos.length)];
     }
 
+    @Transactional
     private Optional<Empresa> getAnyExistingEmpresa() {
         log.info("Buscando uma empresa existente para referência para matrículas...");
         Optional<Page<Empresa>> byFiltro = empresaService.findByFiltro("", pageableHelp.getPageable(0, 1, new ArrayList<>()));

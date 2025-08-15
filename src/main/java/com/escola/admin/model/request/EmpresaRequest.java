@@ -9,7 +9,7 @@ public record EmpresaRequest(
         String telefone,
         String email,
         String endereco,
-        String logoUrl,
+        String logoBase64,
         Boolean ativo
 ) {
 }

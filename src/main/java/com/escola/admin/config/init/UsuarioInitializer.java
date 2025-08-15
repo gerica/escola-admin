@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -29,6 +30,7 @@ public class UsuarioInitializer {
     PageableHelp pageableHelp;
     EmpresaService empresaService; // Injetado o repositório de empresas
 
+    @Transactional // Use readOnly = true para otimizar, já que é uma operação de leitura
     void carga() {
         log.info("<INIT> Carga de usuários...");
         // Tenta obter uma empresa existente para vincular aos usuários
@@ -50,6 +52,7 @@ public class UsuarioInitializer {
     }
 
     // Método auxiliar para buscar uma empresa existente
+    @Transactional
     private Optional<Empresa> getAnyExistingEmpresa() {
         // Busca a primeira empresa cadastrada. Se houver 25, pega a primeira.
         // PageRequest.of(0, 1) busca 1 elemento na primeira página.

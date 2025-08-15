@@ -13,6 +13,8 @@ import java.util.List;
 )
 public interface TurmaMapper {
 
+    @Mapping(target = "empresa.logoBase64", ignore = true)
+    @Mapping(target = "curso.empresa.logoBase64", ignore = true)
     TurmaResponse toResponse(Turma entity);
 
     List<TurmaResponse> toResponseList(List<Turma> entities);

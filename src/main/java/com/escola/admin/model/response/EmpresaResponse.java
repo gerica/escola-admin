@@ -13,7 +13,7 @@ public record EmpresaResponse(
         String telefone,
         String email,
         String endereco,
-        String logoUrl,
+        String logoBase64,
         Boolean ativo,
         @JsonFormat(pattern = "yyyy-MM-dd")
         LocalDateTime dataCadastro,

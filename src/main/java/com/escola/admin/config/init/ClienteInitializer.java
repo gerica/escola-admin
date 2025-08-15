@@ -12,6 +12,7 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ public class ClienteInitializer {
             "Ferreira", "Gomes", "Martins", "Ribeiro", "Fernandes", "Carvalho", "Araujo", "Melo", "Barbosa", "Dias"
     };
 
+    @Transactional
     void carga() {
         log.info("Iniciando a verificação de dados (cliente) iniciais...");
 
@@ -231,7 +233,7 @@ public class ClienteInitializer {
         return firstName + " " + lastName;
     }
 
-    // Método auxiliar para buscar uma empresa existente
+    @Transactional
     private Optional<Empresa> getAnyExistingEmpresa() {
         Optional<Page<Empresa>> byFiltro = empresaService.findByFiltro("", pageableHelp.getPageable(0, 1, new ArrayList<>()));
         return byFiltro.get().getContent().stream().findAny();
