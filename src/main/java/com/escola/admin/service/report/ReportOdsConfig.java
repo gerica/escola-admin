@@ -11,40 +11,22 @@ import java.util.Arrays;
 @Configuration
 public class ReportOdsConfig {
 
-    public static final String DESCRICAO_TITULO = "Descrição";
-    public static final String DESCRICAO_VALUE = "descricao";
-    public static final String OBSERVACAO_TITULO = "Observação";
-    public static final String OBSERVACAO_VALUE = "observacao";
-    public static final String FUNCIONARIO = "funcionario";
-    public static final String CONTRATO_TITULO = "Contrato";
-    public static final String CONTRATO_VALUE = "contrato";
-    public static final String E_MAIL_VALUE = "e_mail";
-    public static final String COMPLEMENTO_VALUE = "complemento";
-    public static final String LOGRADOURO_VALUE = "logradouro";
-    public static final String BAIRRO_VALUE = "bairro";
-
-
     @Bean("reportEmpresaODS")
     public GenericReportOds<Empresa> reportEmpresaOds() {
         return new GenericReportOds<>(
                 "Relatório de Empresas",
-//                Arrays.asList("Nome", "Razão Social", "Responsável", "E-mail", "CNPJ", "Logradouro", "Complemento", "Bairro", "CEP"),
-//                Arrays.asList("nome", "razao_social", "responsavel", E_MAIL_VALUE, "cnpj", LOGRADOURO_VALUE, COMPLEMENTO_VALUE, BAIRRO_VALUE, "cep"),
-
-                Arrays.asList("Razão Social", "CNPJ"),
-                Arrays.asList("razao_social", "cnpj"),
+                Arrays.asList("Nome Fantasia", "Razão Social", "CNPJ", "Inscrição Estadual", "E-mail", "Telefone"),
+                Arrays.asList("nome_fantasia", "razao_social", "cnpj", "inscricao_estadual", "email", "telefone"),
 
                 empresa -> {
                     ObjectMapper mapper = new ObjectMapper();
                     ObjectNode lineNode = mapper.createObjectNode();
+                    lineNode.put("nome_fantasia", empresa.getNomeFantasia());
                     lineNode.put("razao_social", empresa.getRazaoSocial());
-//                    lineNode.put("responsavel", empresa.getPessoaResponsavel());
-//                    lineNode.put(E_MAIL_VALUE, empresa.getEndereco().getEmail());
                     lineNode.put("cnpj", empresa.getCnpj());
-//                    lineNode.put(LOGRADOURO_VALUE, empresa.getEndereco().getEnderecoLogradouro());
-//                    lineNode.put(COMPLEMENTO_VALUE, empresa.getEndereco().getEnderecoComplemento());
-//                    lineNode.put(BAIRRO_VALUE, empresa.getEndereco().getEnderecoBairro());
-//                    lineNode.put("cep", empresa.getEndereco().getEnderecoCEP());
+                    lineNode.put("inscricao_estadual", empresa.getInscricaoEstadual());
+                    lineNode.put("email", empresa.getEmail());
+                    lineNode.put("telefone", empresa.getTelefone());
                     return lineNode;
                 }
         );

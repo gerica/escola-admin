@@ -106,7 +106,7 @@ public class EmpresaServiceImpl implements EmpresaService {
             try {
                 MetadadosRelatorioRequest metadados = MetadadosRelatorioRequest.builder()
                         .nomeUsuario("%s %s".formatted(usuarioRequest.getFirstname(), usuarioRequest.getLastname()))
-                        .titulo("Sistama de gestão")
+                        .titulo("Sistema de Gestão Escolar")
                         .subtitulo("Relatório de empresas")
                         .nomeArquivo("empresas.pdf")
                         .build();
