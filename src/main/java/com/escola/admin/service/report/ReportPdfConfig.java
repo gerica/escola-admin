@@ -13,8 +13,6 @@ public class ReportPdfConfig {
     public GenericReportPdf<Empresa> reportEmpresaPdf(LocalPdfUtil pdfUtil) {
         return new GenericReportPdf<>(
                 pdfUtil,
-                TITULO_SISTEMA,
-                "Relatório de Empresas",
                 new String[]{"Nome Fantasia", "Razão Social", "CNPJ", "Inscrição Estadual", "E-mail", "Telefone"},
                 new Integer[]{25, 30, 15, 10, 10, 10},
                 entity -> new String[]{

@@ -8,7 +8,7 @@ import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.EmpresaMapper;
 import com.escola.admin.model.request.EmpresaRequest;
-import com.escola.admin.model.request.FiltroRelatorioRequest;
+import com.escola.admin.model.request.report.FiltroRelatorioRequest;
 import com.escola.admin.model.response.EmpresaResponse;
 import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.service.EmpresaService;
@@ -21,6 +21,7 @@ import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
@@ -61,7 +62,7 @@ public class EmpresaController {
 
     @QueryMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
-    public Mono<RelatorioBase64Response> downloadListaEmpesas(@Argument FiltroRelatorioRequest request) {
+    public Mono<RelatorioBase64Response> downloadListaEmpesas(@Argument FiltroRelatorioRequest request, Authentication authentication) {
         return service.emitirRelatorio(request)
                 .onErrorResume(BaseException.class, Mono::error);
     }

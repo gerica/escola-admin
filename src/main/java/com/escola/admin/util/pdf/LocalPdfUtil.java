@@ -49,6 +49,14 @@ public class LocalPdfUtil {
         this.tamanhoFonteTabela = tam;
     }
 
+    public void iniciarRelatorio(boolean retrato) {
+        this.iniciarRelatorio(null, null, false, retrato);
+    }
+
+    public void iniciarRelatorio(String titulo) {
+        this.iniciarRelatorio(titulo, null, false, true);
+    }
+
     public void iniciarRelatorio(String titulo, String subtitulo, boolean retrato, boolean immediateFlush) {
         this.out = new ByteArrayOutputStream();
         this.pdfDoc = new PdfDocument(new PdfWriter(this.out));

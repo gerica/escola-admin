@@ -1,4 +1,4 @@
-package com.escola.admin.model.request;
+package com.escola.admin.model.request.report;
 
 import com.escola.admin.service.report.TipoArquivoEnum;
 import lombok.Builder;

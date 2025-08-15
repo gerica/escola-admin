@@ -2,6 +2,7 @@ package com.escola.admin.service.report;
 
 import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Usuario;
+import com.escola.admin.model.request.report.MetadadosRelatorioRequest;
 import com.escola.admin.util.pdf.LocalPdfParameters;
 import com.escola.admin.util.pdf.LocalPdfTable;
 import com.escola.admin.util.pdf.LocalPdfUtil;
@@ -21,19 +22,17 @@ import java.util.function.Function;
 public class GenericReportPdf<T> implements ReportGenerator<T> {
 
     LocalPdfUtil pdfUtil;
-    String titulo;
-    String subtitulo;
     String[] cabecalhos;
     Integer[] colunas;
     Function<T, String[]> entityToRowMapper;
 
     @Override
-    public ObjectNode build(List<T> entities) throws BaseException {
-        pdfUtil.iniciarRelatorio(criarParameters());
+    public ObjectNode build(List<T> entities, MetadadosRelatorioRequest metadados) throws BaseException {
+        pdfUtil.iniciarRelatorio(criarParameters(metadados));
         pdfUtil.addLineSeparator();
 
         pdfUtil.addLinhaEmBranco();
-        pdfUtil.addParagrafo(subtitulo);
+        pdfUtil.addParagrafo(metadados.subtitulo());
         pdfUtil.addLinhaEmBranco(1.0f);
 
         addCorpo(entities);
@@ -41,7 +40,7 @@ public class GenericReportPdf<T> implements ReportGenerator<T> {
 
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode arquivo = mapper.createObjectNode();
-        arquivo.put("filename", subtitulo + ".pdf");
+        arquivo.put("filename", metadados.nomeArquivo() + ".pdf");
         arquivo.put("filetype", ReportService.APPLICATION_PDF);
         arquivo.set("content", new BinaryNode(pdfUtil.encerrarRelatorio()));
         return arquivo;
@@ -69,19 +68,19 @@ public class GenericReportPdf<T> implements ReportGenerator<T> {
         pdfUtil.encerrarTabela();
     }
 
-    private LocalPdfParameters criarParameters() {
-        Usuario usuarioRequest = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    private LocalPdfParameters criarParameters(MetadadosRelatorioRequest metadados) {
+
 
         return LocalPdfParameters.builder()
-                .metadataTitle(titulo)
-                .metadataSubject(subtitulo)
-                .metadataAuthor(usuarioRequest.getFirstname())
+                .metadataTitle(metadados.titulo())
+                .metadataSubject(metadados.subtitulo())
+                .metadataAuthor(metadados.nomeUsuario())
                 .metadataKeywords("Relatório")
-                .metadataCreator(usuarioRequest.getFirstname())
+                .metadataCreator(metadados.nomeUsuario())
                 .retrato(false)
                 .immediateFlush(false)
-                .tituloRelatorio(titulo)
-                .subtituloRelatorio(subtitulo)
+                .tituloRelatorio(metadados.titulo())
+                .subtituloRelatorio(metadados.subtitulo())
                 .build();
     }
 

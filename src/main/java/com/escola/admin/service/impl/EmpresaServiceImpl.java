@@ -2,9 +2,11 @@ package com.escola.admin.service.impl;
 
 import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Empresa;
+import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.EmpresaMapper;
 import com.escola.admin.model.request.EmpresaRequest;
-import com.escola.admin.model.request.FiltroRelatorioRequest;
+import com.escola.admin.model.request.report.FiltroRelatorioRequest;
+import com.escola.admin.model.request.report.MetadadosRelatorioRequest;
 import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.repository.EmpresaRepository;
 import com.escola.admin.repository.UsuarioRepository;
@@ -19,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -98,10 +101,16 @@ public class EmpresaServiceImpl implements EmpresaService {
 
     public Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request) {
         Optional<Page<Empresa>> optional = findByFiltro(request.filtro(), null);
-
         if (optional.isPresent()) {
+            Usuario usuarioRequest = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             try {
-                ObjectNode jsonNodes = reportService.generateReport(request.tipo(), optional.get().getContent(), Empresa.class);
+                MetadadosRelatorioRequest metadados = MetadadosRelatorioRequest.builder()
+                        .nomeUsuario("%s %s".formatted(usuarioRequest.getFirstname(), usuarioRequest.getLastname()))
+                        .titulo("Sistama de gestão")
+                        .subtitulo("Relatório de empresas")
+                        .nomeArquivo("empresas.pdf")
+                        .build();
+                ObjectNode jsonNodes = reportService.generateReport(request.tipo(), optional.get().getContent(), metadados, Empresa.class);
 
                 // Extrai os campos do ObjectNode e cria a resposta
                 String nomeArquivo = jsonNodes.get("filename").asText();

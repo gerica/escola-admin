@@ -507,4 +507,24 @@ public class ContratoServiceImpl implements ContratoService {
     ) {
     }
 
+//    public Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, Long empresaIdFromToken) {
+//        Optional<Page<Empresa>> optional = findByFiltro(request.filtro(), null);
+//        return optional.map(empresas -> findById(empresaIdFromToken).flatMap(empresa -> {
+//            try {
+//                ObjectNode jsonNodes = reportService.generateReport(request.tipo(), empresas.getContent(), Empresa.class);
+//
+//                // Extrai os campos do ObjectNode e cria a resposta
+//                String nomeArquivo = jsonNodes.get("filename").asText();
+//                String conteudoBase64 = jsonNodes.get("content").asText();
+//                RelatorioBase64Response response = new RelatorioBase64Response(nomeArquivo, conteudoBase64);
+//
+//                return Mono.just(response);
+//            } catch (BaseException e) {
+//                return Mono.error(e);
+//            } catch (Exception e) {
+//                return Mono.error(new RuntimeException("Erro ao processar o relatório", e));
+//            }
+//        })).orElseGet(Mono::empty);
+//    }
+
 }

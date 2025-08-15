@@ -1,6 +1,7 @@
 package com.escola.admin.service.report;
 
 import com.escola.admin.exception.BaseException;
+import com.escola.admin.model.request.report.MetadadosRelatorioRequest;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -19,11 +20,11 @@ public class ReportService<T> {
 
     ReportFactoryService<T> reportFactoryService;
 
-    public ObjectNode generateReport(TipoArquivoEnum reportType, List<T> entities, Class<T> entityClass) throws BaseException {
+    public ObjectNode generateReport(TipoArquivoEnum reportType, List<T> entities, MetadadosRelatorioRequest metadados, Class<T> entityClass) throws BaseException {
         // Get the appropriate report generator
         ReportGenerator<T> reportGenerator = reportFactoryService.getReportGenerator(reportType, entityClass);
 
         // Generate the report
-        return reportGenerator.build(entities);
+        return reportGenerator.build(entities, metadados);
     }
 }

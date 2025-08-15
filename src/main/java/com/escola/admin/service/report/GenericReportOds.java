@@ -1,6 +1,7 @@
 package com.escola.admin.service.report;
 
 import com.escola.admin.exception.BaseException;
+import com.escola.admin.model.request.report.MetadadosRelatorioRequest;
 import com.escola.admin.util.OpenDocumentUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,7 +25,7 @@ public class GenericReportOds<T> implements ReportGenerator<T> {
     private final Function<T, JsonNode> entityToJsonMapper;
 
     @Override
-    public ObjectNode build(List<T> entities) throws BaseException {
+    public ObjectNode build(List<T> entities, MetadadosRelatorioRequest metadados) throws BaseException {
         ObjectMapper mapper = new ObjectMapper();
 
         // Convert entities to JSON nodes
