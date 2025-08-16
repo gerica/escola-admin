@@ -146,8 +146,6 @@ public class UsuarioController {
     @MutationMapping
     @PreAuthorize("hasAuthority('SUPER_ADMIN')") // Apenas SUPER_ADMIN pode chamar
     public Mono<ImpersonationResponse> impersonateUser(@Argument Long id, Authentication authentication) {
-        // 'authentication' aqui é a do SUPER_ADMIN que está fazendo a chamada
-//        SecurityContextHolder.getContext().getAuthentication()
         return service.impersonate(id, authentication)
                 .map(impersonationData -> {
                     // O serviço retornará o token e o usuário impersonado

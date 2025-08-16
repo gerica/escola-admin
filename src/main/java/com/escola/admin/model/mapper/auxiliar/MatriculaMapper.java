@@ -17,8 +17,8 @@ import java.util.List;
 public interface MatriculaMapper {
 
     @Mapping(target = "cliente.cidadeDesc", source = "cliente.cidade")
-    @Mapping(target = "turma.empresa.logoBase64", ignore = true)
-    @Mapping(target = "turma.curso.empresa.logoBase64", ignore = true)
+    @Mapping(target = "turma.empresa.logo", ignore = true)
+    @Mapping(target = "turma.curso.empresa.logo", ignore = true)
     MatriculaResponse toResponse(Matricula entity);
 
     List<MatriculaResponse> toResponseList(List<Matricula> entities);

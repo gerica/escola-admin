@@ -1,9 +1,11 @@
 package com.escola.admin.model.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Builder;
 
 import java.time.LocalDateTime;
 
+@Builder
 public record EmpresaResponse(
         Long id,
         String nomeFantasia,
@@ -13,7 +15,7 @@ public record EmpresaResponse(
         String telefone,
         String email,
         String endereco,
-        String logoBase64,
+        LogoResponse logo,
         Boolean ativo,
         @JsonFormat(pattern = "yyyy-MM-dd")
         LocalDateTime dataCadastro,

@@ -7,7 +7,8 @@ input EmpresaRequest {
     telefone: String
     email: String
     endereco: String
-    logoUrl: String
+    logoBase64: String
+    logoMimeType: String
     ativo: Boolean
 }
 
@@ -20,7 +21,7 @@ type EmpresaResponse {
     telefone: String
     email: String
     endereco: String
-    logoUrl: String
+    logo: LogoResponse
     ativo: Boolean
     dataCadastro: Date
     dataAtualizacao: Date
@@ -50,5 +51,5 @@ extend type Query {
 }
 
 extend type Mutation {
-    saveEmpresa(request: EmpresaRequest!): EmpresaResponse!
+    saveEmpresa(request: EmpresaRequest!): String!
 }

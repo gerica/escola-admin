@@ -41,7 +41,9 @@ public class Empresa {
     @Column(nullable = false) // Endereço é obrigatório
     String endereco;
 
-    String logoUUID; // URL do logo da empresa, se houver
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "logo_id", referencedColumnName = "id")
+    Logo logo;
 
     @Column(nullable = false)
     @Builder.Default

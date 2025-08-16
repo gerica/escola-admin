@@ -1,8 +1,10 @@
 package com.escola.admin.model.mapper;
 
 import com.escola.admin.model.entity.Empresa;
+import com.escola.admin.model.entity.Logo;
 import com.escola.admin.model.request.EmpresaRequest;
 import com.escola.admin.model.response.EmpresaResponse;
+import com.escola.admin.model.response.LogoResponse;
 import org.mapstruct.*;
 
 import java.util.List;
@@ -28,8 +30,30 @@ public interface EmpresaMapper {
         return cnpj.replaceAll("(\\d{2})(\\d{3})(\\d{3})(\\d{4})(\\d{2})", "$1.$2.$3/$4-$5");
     }
 
-    @Mapping(target = "logoBase64", ignore = true)
+    @AfterMapping
+    default void setLogoDetails(@MappingTarget EmpresaResponse.EmpresaResponseBuilder builder, String logoBase64, String mimeType) {
+        if (logoBase64 != null && mimeType != null) {
+            builder.logo(new LogoResponse(
+                    builder.build().logo().uuid(),
+                    mimeType,
+                    builder.build().logo().hash(),
+                    logoBase64
+            ));
+        }
+    }
+
+    @Mapping(target = "logo", ignore = true)
     EmpresaResponse toResponse(Empresa entity);
+
+    @Mapping(target = "uuid", source = "uuid")
+    @Mapping(target = "mimeType", source = "mimeType")
+    @Mapping(target = "hash", source = "hash")
+    @Mapping(target = "conteudoBase64", ignore = true)
+        // Ignore aqui, pois será adicionado depois
+    LogoResponse toLogoResponse(Logo entity);
+
+    // Método principal que mapeia a Empresa e adiciona o conteúdo da imagem
+    EmpresaResponse toResponseWithLogo(Empresa entity, String logoBase64, String mimeType);
 
     List<EmpresaResponse> toResponseList(List<Empresa> empresas);
 
@@ -37,13 +61,13 @@ public interface EmpresaMapper {
     @Mapping(target = "cnpj", source = "cnpj", qualifiedByName = "formatCNPJ")
     @Mapping(target = "dataCadastro", ignore = true)
     @Mapping(target = "dataAtualizacao", ignore = true)
-    @Mapping(target = "logoUUID", ignore = true)
+    @Mapping(target = "logo", ignore = true)
     Empresa toEntity(EmpresaRequest request);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "dataCadastro", ignore = true)
     @Mapping(target = "dataAtualizacao", ignore = true)
-    @Mapping(target = "logoUUID", ignore = true)
+    @Mapping(target = "logo", ignore = true)
     Empresa updateEntity(EmpresaRequest source, @MappingTarget Empresa target);
 
 }

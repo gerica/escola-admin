@@ -7,9 +7,9 @@ type AppConfigResponse{
 
 type ParametroResponse{
     id: ID
-     chave: String
-     codigoMunicipio: String
-     modeloContrato: String
+    chave: String
+    codigoMunicipio: String
+    modeloContrato: String
 }
 
 type AuthenticationResponse{
@@ -24,5 +24,12 @@ type AuthenticationResponse{
 
 type RelatorioBase64Response{
     nomeArquivo:String
+    conteudoBase64:String
+}
+
+type LogoResponse{
+    uuid:String
+    mimeType:String
+    hash:String
     conteudoBase64:String
 }

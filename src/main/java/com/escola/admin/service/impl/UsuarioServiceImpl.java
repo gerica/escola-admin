@@ -12,6 +12,7 @@ import com.escola.admin.repository.UsuarioRepository;
 import com.escola.admin.security.JwtService;
 import com.escola.admin.service.EmailService;
 import com.escola.admin.service.EmpresaService;
+import com.escola.admin.service.FileStorageService;
 import com.escola.admin.service.UsuarioService;
 import com.escola.admin.util.PasswordGenerator;
 import jakarta.transaction.Transactional;
@@ -43,6 +44,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     UsuarioMapper mapper;
     EmailService emailService;
     PasswordEncoder passwordEncoder;
+    FileStorageService storageService;
     EmpresaMapper empresaMapper;
     JwtService jwtService;
     String MUTATION_SEND_EMAIL = """
@@ -297,26 +299,34 @@ public class UsuarioServiceImpl implements UsuarioService {
         return Mono.fromCallable(() -> repository.findById(targetUserId))
                 .flatMap(Mono::justOrEmpty)
                 .switchIfEmpty(Mono.error(new BaseException("Usuário alvo para impersonação não encontrado.")))
-                .map(targetUser -> {
+                .flatMap(targetUser -> {
                     // Regra de negócio: SUPER_ADMIN só pode impersonar ADMIN_EMPRESA
 //                    if (!targetUser.getRoles().contains(Role.ADMIN_EMPRESA)) {
 //                        throw new BaseException("Impersonação só é permitida para usuários com a role ADMIN_EMPRESA.");
 //                    }
                     // Gera o token especial
                     String token = jwtService.generateImpersonationToken(targetUser, impersonatorAuth);
+                    return storageService.getFileAsBase64(targetUser.getEmpresa().getLogo().getUuid())
+                            .doOnError(e -> log.error("Arquivo do logo não encontrado para a empresa com ID {} (UUID: {}): {}",
+                                    targetUser.getEmpresa().getId(), targetUser.getEmpresa().getLogo().getUuid(), e.getMessage()))
+                            // RESILIÊNCIA: Em caso de erro, "resgata" o fluxo retornando um Mono vazio.
+                            .onErrorResume(e -> Mono.just(""))
+                            // Mapeia a resposta com o Base64 obtido (ou a string vazia)
+                            .map(logoBase64 -> {
+                                AuthenticationResponse authenticationResponse = AuthenticationResponse.builder()
+                                        .token(token)
+                                        .username(targetUser.getUsername())
+                                        .firstName(targetUser.getFirstname())
+                                        .lastName(targetUser.getLastname())
+                                        .roles(targetUser.getRoles())
+                                        .precisaAlterarSenha(targetUser.isPrecisaAlterarSenha())
+                                        .empresa(empresaMapper.toResponseWithLogo(targetUser.getEmpresa(), logoBase64, targetUser.getEmpresa().getLogo().getMimeType())) // Associa a EmpresaResponse aqui
+                                        .build();
 
-                    AuthenticationResponse authenticationResponse = AuthenticationResponse.builder()
-                            .token(token)
-                            .username(targetUser.getUsername())
-                            .firstName(targetUser.getFirstname())
-                            .lastName(targetUser.getLastname())
-                            .roles(targetUser.getRoles())
-                            .precisaAlterarSenha(targetUser.isPrecisaAlterarSenha())
-                            .empresa(empresaMapper.toResponse(targetUser.getEmpresa())) // Associa a EmpresaResponse aqui
-                            .build();
+                                // Retorna o token e o usuário para o controller
+                                return Map.of("token", token, "user", authenticationResponse);
+                            });
 
-                    // Retorna o token e o usuário para o controller
-                    return Map.of("token", token, "user", authenticationResponse);
                 });
     }
 

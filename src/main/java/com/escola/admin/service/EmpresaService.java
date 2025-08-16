@@ -3,6 +3,7 @@ package com.escola.admin.service;
 import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.request.EmpresaRequest;
 import com.escola.admin.model.request.report.FiltroRelatorioRequest;
+import com.escola.admin.model.response.EmpresaResponse;
 import com.escola.admin.model.response.RelatorioBase64Response;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,9 +13,11 @@ import java.util.Optional;
 
 public interface EmpresaService {
 
-    Mono<Empresa> save(EmpresaRequest request);
+    Mono<Void> save(EmpresaRequest request);
 
     Mono<Empresa> findById(Long id);
+
+    Mono<EmpresaResponse> findEntityAndLogoById(Long id);
 
     Optional<Page<Empresa>> findByFiltro(String filtro, Pageable pageable);
 

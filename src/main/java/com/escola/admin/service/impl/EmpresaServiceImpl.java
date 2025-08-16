@@ -2,17 +2,20 @@ package com.escola.admin.service.impl;
 
 import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Empresa;
+import com.escola.admin.model.entity.Logo;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.EmpresaMapper;
 import com.escola.admin.model.request.EmpresaRequest;
 import com.escola.admin.model.request.report.FiltroRelatorioRequest;
 import com.escola.admin.model.request.report.MetadadosRelatorioRequest;
+import com.escola.admin.model.response.EmpresaResponse;
 import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.repository.EmpresaRepository;
 import com.escola.admin.repository.UsuarioRepository;
 import com.escola.admin.service.EmpresaService;
 import com.escola.admin.service.FileStorageService;
 import com.escola.admin.service.report.ReportService;
+import com.escola.admin.util.HashUtils;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
@@ -41,25 +44,9 @@ public class EmpresaServiceImpl implements EmpresaService {
     ReportService<Empresa> reportService;
     FileStorageService storageService;
 
-//    @Override
-//    @Transactional
-//    public Mono<Empresa> save(EmpresaRequest request) {
-//        Mono<Empresa> empresaMono = Mono.justOrEmpty(request.id())
-//                .flatMap(id -> Mono.fromCallable(() -> repository.findById(id)))
-//                .flatMap(Mono::justOrEmpty).map((existingEmpresa) -> {
-//                    mapper.updateEntity(request, existingEmpresa);
-//                    return existingEmpresa;
-//                })
-//                .switchIfEmpty(Mono.defer(() -> Mono.just(mapper.toEntity(request))));
-//
-//        return empresaMono.flatMap(uwp -> Mono.fromCallable(() -> repository.save(uwp)))
-//                .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
-//                .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException);
-//    }
-
     @Override
     @Transactional
-    public Mono<Empresa> save(EmpresaRequest request) {
+    public Mono<Void> save(EmpresaRequest request) {
         log.info("Salvar empresa: {}", request.nomeFantasia());
 
         return validateRequest(request)
@@ -69,7 +56,8 @@ public class EmpresaServiceImpl implements EmpresaService {
                 .doOnSuccess(savedEntity -> log.info("Empresa salvo com sucesso. ID: {}", savedEntity.getId()))
                 .doOnError(e -> log.error("Falha na operação de salvar empresa: {}", e.getMessage(), e))
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
-                .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException);
+                .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException)
+                .then();
 
     }
 
@@ -86,7 +74,29 @@ public class EmpresaServiceImpl implements EmpresaService {
                         return Mono.empty();
                     }
                 })
-                .doOnError(e -> log.error("Erro ao buscar cargo por ID {}: {}", id, e.getMessage(), e));
+                .doOnError(e -> log.error("Erro ao buscar empresa por ID {}: {}", id, e.getMessage(), e));
+    }
+
+    @Override
+    public Mono<EmpresaResponse> findEntityAndLogoById(Long id) {
+        return findById(id)
+                .flatMap(empresa -> {
+                    // Verifica se a empresa tem um logo
+                    if (empresa.getLogo() == null) {
+                        // Se não tiver, retorna a resposta sem a imagem
+                        return Mono.just(mapper.toResponse(empresa));
+                    }
+
+                    // Tenta buscar o arquivo Base64
+                    return storageService.getFileAsBase64(empresa.getLogo().getUuid())
+                            .doOnError(e -> log.error("Arquivo do logo não encontrado para a empresa com ID {} (UUID: {}): {}",
+                                    id, empresa.getLogo().getUuid(), e.getMessage()))
+                            // RESILIÊNCIA: Em caso de erro, "resgata" o fluxo retornando um Mono vazio.
+                            .onErrorResume(e -> Mono.just(""))
+                            // Mapeia a resposta com o Base64 obtido (ou a string vazia)
+                            .map(logoBase64 -> mapper.toResponseWithLogo(empresa, logoBase64, empresa.getLogo().getMimeType()));
+                })
+                .doOnError(e -> log.error("Erro ao buscar empresa com ID {}: {}", id, e.getMessage(), e));
     }
 
     @Override
@@ -183,10 +193,42 @@ public class EmpresaServiceImpl implements EmpresaService {
     }
 
     private Mono<Empresa> uploadFile(Empresa empresa, EmpresaRequest request) {
+        String fileHash = HashUtils.calculateSha256Hash(request.logoBase64());
+
+        // Cenário 1: Não há logo na empresa
+        if (empresa.getLogo() == null) {
+            return saveNewLogoAndUpdate(empresa, request, fileHash);
+        }
+
+        // Cenário 2: O hash do novo arquivo é igual ao do logo existente
+        if (fileHash.equals(empresa.getLogo().getHash())) {
+            log.info("O hash do logo para {} é o mesmo. Reutilizando arquivo.", empresa.getNomeFantasia());
+            return Mono.just(empresa);
+        }
+
+        // Cenário 3: O hash é diferente, então o logo foi alterado
+        // Deleta o arquivo antigo e salva o novo em um único fluxo reativo
+        log.info("O hash do logo para {} é diferente. Apagando logo antigo e salvando novo arquivo.", empresa.getNomeFantasia());
+        return storageService.deleteFile(empresa.getLogo().getUuid())
+                .flatMap(success -> saveNewLogoAndUpdate(empresa, request, fileHash));
+    }
+
+    /**
+     * Método auxiliar para salvar um novo arquivo de logo e atualizar a entidade Empresa.
+     */
+    private Mono<Empresa> saveNewLogoAndUpdate(Empresa empresa, EmpresaRequest request, String fileHash) {
         return storageService.saveFile(request.logoBase64())
                 .flatMap(uuid -> {
-                    log.info("uuid: {}", uuid);
-                    empresa.setLogoUUID(uuid);
+                    log.info("Novo logo salvo com UUID: {}", uuid);
+                    Logo logo;
+                    if (empresa.getLogo() == null) {
+                        logo = Logo.builder().build();
+                        logo.setEmpresa(empresa);
+                        empresa.setLogo(logo);
+                    }
+                    empresa.getLogo().setUuid(uuid);
+                    empresa.getLogo().setMimeType(request.logoMimeType());
+                    empresa.getLogo().setHash(fileHash);
                     return Mono.just(empresa);
                 })
                 .doOnError(ex -> log.error("Falha ao salvar arquivo para {}: {}", empresa.getNomeFantasia(), ex.getMessage()));

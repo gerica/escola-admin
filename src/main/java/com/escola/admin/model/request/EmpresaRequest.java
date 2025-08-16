@@ -10,6 +10,7 @@ public record EmpresaRequest(
         String email,
         String endereco,
         String logoBase64,
+        String logoMimeType,
         Boolean ativo
 ) {
 }

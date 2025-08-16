@@ -40,10 +40,9 @@ public class EmpresaController {
 
     @MutationMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
-    public Mono<EmpresaResponse> saveEmpresa(@Argument EmpresaRequest request) {
+    public Mono<String> saveEmpresa(@Argument EmpresaRequest request) {
         return service.save(request)
-                .map(mapper::toResponse)
-                .switchIfEmpty(Mono.error(new BaseException("Não foi possível salvar a empresa. O serviço retornou um resultado vazio."))) // Use switchIfEmpty for empty Mono
+                .then(Mono.just("Operação realizada com sucesso."))
                 .onErrorResume(BaseException.class, Mono::error); // This isn't strictly necessary if BaseException is already Mono.error from service, but good for clarity
 
     }
@@ -70,7 +69,8 @@ public class EmpresaController {
     @QueryMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
     public Mono<EmpresaResponse> fetchByIdEmpresa(@Argument Long id) {
-        return service.findById(id).map(mapper::toResponse);
+        return service.findEntityAndLogoById(id)
+                .onErrorResume(BaseException.class, Mono::error);
     }
 
     @QueryMapping

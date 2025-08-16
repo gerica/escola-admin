@@ -38,57 +38,61 @@ public class EmpresaInitializer {
     }
 
     void criarEmpresasDeTeste() {
+        Optional<Page<Empresa>> byFiltro = service.findByFiltro("", pageableHelp.getPageable(0, 1, new ArrayList<>()));
+        if (byFiltro.isPresent() && !byFiltro.get().getContent().isEmpty()) {
+            log.info("Empresas '{}' já existes, pulando criação.", byFiltro.get().getSize());
+            return;
+        }
+
         for (int i = 1; i <= NUM_EMPRESAS_TO_CREATE; i++) {
             String nomeFantasia = "Empresa Teste " + i;
             // Verifica se a empresa já existe para evitar duplicatas em reinícios do app
-            Optional<Page<Empresa>> byFiltro = service.findByFiltro(nomeFantasia, pageableHelp.getPageable(0, 1, new ArrayList<>()));
-            if (byFiltro.isPresent() && byFiltro.get().getSize() > 0) {
-                log.info("Criando empresa: {}", nomeFantasia);
 
-                String cnpjBase = generateRandomDigits(8); // Gera 12 dígitos para o CNPJ base
-                String filial = String.format("%04d", i % 10000); // Gera 4 dígitos para a filial
-                String digito = String.format("%02d", random.nextInt(100)); // Gera 2 dígitos para o dígito verificador
-                String rawCnpj = cnpjBase + filial + digito; // CNPJ com 18 dígitos formatados
 
-                // Certifique-se de que o método formatCnpj esteja acessível,
-                // idealmente como um método estático na classe Empresa ou em um utilitário.
-                // Se o CNPJ no banco for armazenado formatado, use o formatCnpj.
-                // Se for armazenado sem formatação, remova a chamada ao formatCnpj.
-                String formattedCnpj = formatCnpjForInitializer(rawCnpj); // Usa um método auxiliar para formatação
+            log.info("Criando empresa: {}", nomeFantasia);
 
-                // URL da imagem a ser convertida
-                String imageUrl = "https://placehold.co/150x50/000/FFF?text=Logo" + i;
-                String logoBase64 = null;
-                try {
-                    // Chama o novo método para converter a imagem para Base64
-                    logoBase64 = convertImageUrlToBase64(imageUrl);
-                } catch (IOException e) {
-                    log.error("Erro ao converter imagem da URL '{}' para Base64: {}", imageUrl, e.getMessage());
-                    // Continua a criação da empresa, mas com a logo nula
-                }
+            String cnpjBase = generateRandomDigits(8); // Gera 12 dígitos para o CNPJ base
+            String filial = String.format("%04d", i % 10000); // Gera 4 dígitos para a filial
+            String digito = String.format("%02d", random.nextInt(100)); // Gera 2 dígitos para o dígito verificador
+            String rawCnpj = cnpjBase + filial + digito; // CNPJ com 18 dígitos formatados
 
-                EmpresaRequest request = new EmpresaRequest(
-                        null,
-                        nomeFantasia,
-                        "Razao Social da Empresa " + i + " Ltda.",
-                        formattedCnpj,
-                        "IE" + String.format("%09d", i),
-                        String.format("%02d", random.nextInt(99)) + "9" + String.format("%08d", random.nextInt(100000000)),
-                        "contato" + i + "@empresateste.com",
-                        "Rua das Flores, " + i + ", Centro, Cidade Teste, Estado Teste",
-                        logoBase64,
-                        true);
+            // Certifique-se de que o método formatCnpj esteja acessível,
+            // idealmente como um método estático na classe Empresa ou em um utilitário.
+            // Se o CNPJ no banco for armazenado formatado, use o formatCnpj.
+            // Se for armazenado sem formatação, remova a chamada ao formatCnpj.
+            String formattedCnpj = formatCnpjForInitializer(rawCnpj); // Usa um método auxiliar para formatação
 
-                try {
-                    service.save(request).block();
-                    log.info(">>> Empresa '{}' criada com sucesso.", nomeFantasia);
-                } catch (Exception e) {
-                    log.error("Erro ao salvar a empresa '{}': {}", nomeFantasia, e.getMessage());
-                    // Em um ambiente real, você pode querer lançar uma exceção
-                    // ou ter uma estratégia de retry.
-                }
-            } else {
-                log.info("Empresa '{}' já existe, pulando criação.", nomeFantasia);
+            // URL da imagem a ser convertida
+            String imageUrl = "https://placehold.co/150x50/000/FFF?text=Logo" + i;
+            String logoBase64 = null;
+            try {
+                // Chama o novo método para converter a imagem para Base64
+                logoBase64 = convertImageUrlToBase64(imageUrl);
+            } catch (IOException e) {
+                log.error("Erro ao converter imagem da URL '{}' para Base64: {}", imageUrl, e.getMessage());
+                // Continua a criação da empresa, mas com a logo nula
+            }
+
+            EmpresaRequest request = new EmpresaRequest(
+                    null,
+                    nomeFantasia,
+                    "Razao Social da Empresa " + i + " Ltda.",
+                    formattedCnpj,
+                    "IE" + String.format("%09d", i),
+                    String.format("%02d", random.nextInt(99)) + "9" + String.format("%08d", random.nextInt(100000000)),
+                    "contato" + i + "@empresateste.com",
+                    "Rua das Flores, " + i + ", Centro, Cidade Teste, Estado Teste",
+                    logoBase64,
+                    "image/svg+xml",
+                    true);
+
+            try {
+                service.save(request).block();
+                log.info(">>> Empresa '{}' criada com sucesso.", nomeFantasia);
+            } catch (Exception e) {
+                log.error("Erro ao salvar a empresa '{}': {}", nomeFantasia, e.getMessage());
+                // Em um ambiente real, você pode querer lançar uma exceção
+                // ou ter uma estratégia de retry.
             }
         }
     }
