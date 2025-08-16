@@ -1,6 +1,7 @@
 package com.escola.admin.service.report;
 
 import com.escola.admin.model.entity.Empresa;
+import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.entity.cliente.Cliente;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -8,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @Configuration
 public class ReportOdsConfig {
@@ -52,6 +54,29 @@ public class ReportOdsConfig {
                     lineNode.put("profissao", entity.getProfissao());
                     lineNode.put("local_trabalho", entity.getLocalTrabalho());
                     lineNode.put("status", entity.getStatusCliente().toString());
+                    return lineNode;
+                }
+        );
+    }
+
+    @Bean("reportUsuarioODS")
+    public GenericReportOds<Usuario> reportUsuarioOds() {
+        return new GenericReportOds<>(
+                "Relatório de Usuários",
+                Arrays.asList("Nome", "Usuároi", "Empresa", "E-mail", "Papeis"),
+                Arrays.asList("nome", "usuario", "empresa", "email", "papeis"),
+
+                entity -> {
+                    ObjectMapper mapper = new ObjectMapper();
+                    ObjectNode lineNode = mapper.createObjectNode();
+                    lineNode.put("nome", "%s %s".formatted(entity.getFirstname(), entity.getLastname()));
+                    lineNode.put("usuario", entity.getUsername());
+                    lineNode.put("empresa", entity.getEmpresa() != null ? entity.getEmpresa().getNomeFantasia() : "");
+                    lineNode.put("email", entity.getEmail());
+                    lineNode.put("papeis", entity.getRoles().stream()
+                            .map(Enum::toString)
+                            .collect(Collectors.joining(", ")));
+
                     return lineNode;
                 }
         );

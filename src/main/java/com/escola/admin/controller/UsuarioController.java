@@ -7,8 +7,10 @@ import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.UsuarioMapper;
 import com.escola.admin.model.request.UsuarioRequest;
+import com.escola.admin.model.request.report.FiltroRelatorioRequest;
 import com.escola.admin.model.response.AuthenticationResponse;
 import com.escola.admin.model.response.ImpersonationResponse;
+import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.model.response.UsuarioResponse;
 import com.escola.admin.service.UsuarioService;
 import graphql.GraphQLException;
@@ -153,6 +155,18 @@ public class UsuarioController {
                     String token = impersonationData.get("token").toString();
                     return new ImpersonationResponse(token, targetUser);
                 });
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    public Mono<RelatorioBase64Response> downloadListaUsuarios(@Argument FiltroRelatorioRequest request, Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
+
+        return service.emitirRelatorio(request, usuarioAutenticado)
+                .onErrorResume(BaseException.class, Mono::error);
     }
 
 }

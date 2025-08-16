@@ -1,8 +1,9 @@
 package com.escola.admin.service;
 
-import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.request.UsuarioRequest;
+import com.escola.admin.model.request.report.FiltroRelatorioRequest;
+import com.escola.admin.model.response.RelatorioBase64Response;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -30,5 +31,7 @@ public interface UsuarioService {
     Mono<Void> resetPassword(String email);
 
     Mono<Map<String, Object>> impersonate(Long targetUserId, Authentication impersonatorAuth);
+
+    Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, Usuario empresaIdFromToken);
 
 }

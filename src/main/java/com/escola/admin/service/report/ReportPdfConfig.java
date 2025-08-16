@@ -1,10 +1,13 @@
 package com.escola.admin.service.report;
 
 import com.escola.admin.model.entity.Empresa;
+import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.entity.cliente.Cliente;
 import com.escola.admin.util.pdf.LocalPdfUtil;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.stream.Collectors;
 
 @Configuration
 public class ReportPdfConfig {
@@ -47,5 +50,21 @@ public class ReportPdfConfig {
         );
     }
 
-
+    @Bean("reportUsuarioPDF")
+    public GenericReportPdf<Usuario> reportUsuarioPdf(LocalPdfUtil pdfUtil) {
+        return new GenericReportPdf<>(
+                pdfUtil,
+                new String[]{"Nome", "Usuároi", "Empresa", "E-mail", "Papeis"},
+                new Integer[]{20, 20, 20, 10, 30},
+                entity -> new String[]{
+                        "%s %s".formatted(entity.getFirstname(), entity.getLastname()),
+                        entity.getUsername(),
+                        entity.getEmpresa() != null ? entity.getEmpresa().getNomeFantasia() : "",
+                        entity.getEmail(),
+                        entity.getRoles().stream()
+                                .map(Enum::toString)
+                                .collect(Collectors.joining(", "))
+                }
+        );
+    }
 }
