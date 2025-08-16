@@ -7,6 +7,8 @@ import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.cliente.ClienteMapper;
 import com.escola.admin.model.request.cliente.ClienteRequest;
+import com.escola.admin.model.request.report.FiltroRelatorioRequest;
+import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.model.response.cliente.ClienteResponse;
 import com.escola.admin.service.cliente.ClienteService;
 import lombok.AccessLevel;
@@ -144,5 +146,19 @@ public class ClienteController {
                 .then(Mono.just("Operação realizada com sucesso."))
                 .onErrorResume(BaseException.class, Mono::error);
 //                .onErrorResume(e -> Mono.error(new GraphQLException("Falha realizar operação: " + e.getMessage())));
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
+    public Mono<RelatorioBase64Response> downloadListaClientes(@Argument FiltroRelatorioRequest request,
+                                                               Authentication authentication) {
+
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
+
+        return clienteService.emitirRelatorio(request, usuarioAutenticado)
+                .onErrorResume(BaseException.class, Mono::error);
     }
 }

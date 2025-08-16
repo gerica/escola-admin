@@ -26,5 +26,6 @@ public class LocalPdfParameters {
     String tituloRelatorio;
     String subtituloRelatorio;
     boolean retrato;
+    String logoBase64;
 
 }

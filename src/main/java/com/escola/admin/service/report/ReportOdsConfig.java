@@ -1,6 +1,7 @@
 package com.escola.admin.service.report;
 
 import com.escola.admin.model.entity.Empresa;
+import com.escola.admin.model.entity.cliente.Cliente;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.context.annotation.Bean;
@@ -27,6 +28,30 @@ public class ReportOdsConfig {
                     lineNode.put("inscricao_estadual", empresa.getInscricaoEstadual());
                     lineNode.put("email", empresa.getEmail());
                     lineNode.put("telefone", empresa.getTelefone());
+                    return lineNode;
+                }
+        );
+    }
+
+    @Bean("reportClienteODS")
+    public GenericReportOds<Cliente> reportClienteOds() {
+        return new GenericReportOds<>(
+                "Relatório de Empresas",
+                Arrays.asList("Nome", "Data de Nascimento", "CPF", "RG", "Endereço", "E-mail", "Profissão", "Local de Trabalho", "Status"),
+                Arrays.asList("nome", "data_nacimento", "cpf", "rg", "endereco", "email", "profissao", "local_trabalho", "status"),
+
+                entity -> {
+                    ObjectMapper mapper = new ObjectMapper();
+                    ObjectNode lineNode = mapper.createObjectNode();
+                    lineNode.put("nome", entity.getNome());
+                    lineNode.put("data_nacimento", entity.getDataNascimento().toString());
+                    lineNode.put("cpf", entity.getDocCPF());
+                    lineNode.put("rg", entity.getDocRG());
+                    lineNode.put("endereco", entity.getEndereco());
+                    lineNode.put("email", entity.getEmail());
+                    lineNode.put("profissao", entity.getProfissao());
+                    lineNode.put("local_trabalho", entity.getLocalTrabalho());
+                    lineNode.put("status", entity.getStatusCliente().toString());
                     return lineNode;
                 }
         );

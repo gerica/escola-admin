@@ -1,6 +1,7 @@
 package com.escola.admin.service.report;
 
 import com.escola.admin.model.entity.Empresa;
+import com.escola.admin.model.entity.cliente.Cliente;
 import com.escola.admin.util.pdf.LocalPdfUtil;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +23,26 @@ public class ReportPdfConfig {
                         entity.getInscricaoEstadual(),
                         entity.getEmail(),
                         entity.getTelefone()
+                }
+        );
+    }
+
+    @Bean("reportClientePDF")
+    public GenericReportPdf<Cliente> reportClientePdf(LocalPdfUtil pdfUtil) {
+        return new GenericReportPdf<>(
+                pdfUtil,
+                new String[]{"Nome", "Data de Nascimento", "CPF", "RG", "Endereço", "E-mail", "Profissão", "Local de Trabalho", "Status"},
+                new Integer[]{20, 10, 10, 10, 10, 10, 10, 10, 10},
+                entity -> new String[]{
+                        entity.getNome(),
+                        entity.getDataNascimento().toString(),
+                        entity.getDocCPF(),
+                        entity.getDocRG(),
+                        entity.getEndereco(),
+                        entity.getEmail(),
+                        entity.getProfissao(),
+                        entity.getLocalTrabalho(),
+                        entity.getStatusCliente().toString(),
                 }
         );
     }

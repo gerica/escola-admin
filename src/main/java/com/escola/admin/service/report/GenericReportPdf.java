@@ -1,7 +1,6 @@
 package com.escola.admin.service.report;
 
 import com.escola.admin.exception.BaseException;
-import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.request.report.MetadadosRelatorioRequest;
 import com.escola.admin.util.pdf.LocalPdfParameters;
 import com.escola.admin.util.pdf.LocalPdfTable;
@@ -12,7 +11,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.function.Function;
@@ -36,7 +34,7 @@ public class GenericReportPdf<T> implements ReportGenerator<T> {
         pdfUtil.addLinhaEmBranco(1.0f);
 
         addCorpo(entities);
-        addRodape();
+        addRodape(metadados.nomeUsuario());
 
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode arquivo = mapper.createObjectNode();
@@ -69,8 +67,6 @@ public class GenericReportPdf<T> implements ReportGenerator<T> {
     }
 
     private LocalPdfParameters criarParameters(MetadadosRelatorioRequest metadados) {
-
-
         return LocalPdfParameters.builder()
                 .metadataTitle(metadados.titulo())
                 .metadataSubject(metadados.subtitulo())
@@ -81,11 +77,11 @@ public class GenericReportPdf<T> implements ReportGenerator<T> {
                 .immediateFlush(false)
                 .tituloRelatorio(metadados.titulo())
                 .subtituloRelatorio(metadados.subtitulo())
+                .logoBase64(metadados.logoBase64())
                 .build();
     }
 
-    private void addRodape() {
-        Usuario usuarioRequest = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        pdfUtil.addRodape(usuarioRequest.getFirstname());
+    private void addRodape(String usuario) {
+        pdfUtil.addRodape(usuario);
     }
 }

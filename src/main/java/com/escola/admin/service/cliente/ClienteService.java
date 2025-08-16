@@ -1,7 +1,10 @@
 package com.escola.admin.service.cliente;
 
+import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.entity.cliente.Cliente;
 import com.escola.admin.model.request.cliente.ClienteRequest;
+import com.escola.admin.model.request.report.FiltroRelatorioRequest;
+import com.escola.admin.model.response.RelatorioBase64Response;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Mono;
@@ -20,4 +23,6 @@ public interface ClienteService {
     Optional<Page<Cliente>> findAllClientsByStatusAndFiltroWithDependents(String filtro, Long empresaIdFromToken, Pageable pageable);
 
     Mono<Void> deleteById(Long id);
+
+    Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, Usuario empresaIdFromToken);
 }

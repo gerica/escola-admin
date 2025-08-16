@@ -92,6 +92,8 @@ extend type Query {
     ): ClienteResponseWithDependentsPage!
 
     fetchByIdCliente(id: ID): ClienteResponse!
+    downloadListaClientes(request: FiltroRelatorioRequest!): RelatorioBase64Response
+
 }
 
 extend type Mutation {

@@ -49,31 +49,32 @@ public class LocalPdfUtil {
         this.tamanhoFonteTabela = tam;
     }
 
-    public void iniciarRelatorio(boolean retrato) {
-        this.iniciarRelatorio(null, null, false, retrato);
-    }
+//    public void iniciarRelatorio(boolean retrato) {
+//        this.iniciarRelatorio(null, null, false, retrato);
+//    }
+//
+//    public void iniciarRelatorio(String titulo) {
+//        this.iniciarRelatorio(titulo, null, false, true);
+//    }
 
-    public void iniciarRelatorio(String titulo) {
-        this.iniciarRelatorio(titulo, null, false, true);
-    }
-
-    public void iniciarRelatorio(String titulo, String subtitulo, boolean retrato, boolean immediateFlush) {
+    private void iniciarRelatorioLocal(LocalPdfParameters parametros) {
+//        parametros.getTituloRelatorio(), parametros.getSubtituloRelatorio(), parametros.isRetrato(), parametros.isImmediateFlush()
         this.out = new ByteArrayOutputStream();
         this.pdfDoc = new PdfDocument(new PdfWriter(this.out));
-        this.pdfDoc.setDefaultPageSize(retrato ? PageSize.A4 : PageSize.A4.rotate());
-        this.doc = new Document(this.pdfDoc, retrato ? PageSize.A4 : PageSize.A4.rotate(), immediateFlush);
+        this.pdfDoc.setDefaultPageSize(parametros.isRetrato() ? PageSize.A4 : PageSize.A4.rotate());
+        this.doc = new Document(this.pdfDoc, parametros.isRetrato() ? PageSize.A4 : PageSize.A4.rotate(), parametros.isImmediateFlush());
         this.doc.setFontSize(this.tamanhoFonte);
         this.doc.setTextAlignment(TextAlignment.JUSTIFIED);
         this.metadata = this.pdfDoc.getDocumentInfo();
         this.pdfDoc.getCatalog().put(PdfName.Lang, new PdfString("BR"));
-        if (titulo != null) {
-            this.addCabecalho(titulo, subtitulo);
+        if (parametros.getTituloRelatorio() != null) {
+            this.addCabecalho(parametros.getTituloRelatorio(), parametros.getSubtituloRelatorio(), parametros.getLogoBase64());
         }
 
     }
 
     public void iniciarRelatorio(LocalPdfParameters parametros) {
-        this.iniciarRelatorio(parametros.getTituloRelatorio(), parametros.getSubtituloRelatorio(), parametros.isRetrato(), parametros.isImmediateFlush());
+        this.iniciarRelatorioLocal(parametros);
         if (parametros.getMetadataTitle() != null) {
             this.metadata.setTitle(parametros.getMetadataTitle());
         }
@@ -96,9 +97,15 @@ public class LocalPdfUtil {
 
     }
 
-    private void addCabecalho(String titulo, String subtitulo) {
+    private void addCabecalho(String titulo, String subtitulo, String logoBase64) {
         // Load the logo
-        Image logo = new Image(ImageDataFactory.create(UtilBase64.getLogoBase64()));
+        Image logo;
+        if (logoBase64 != null) {
+            logo = new Image(ImageDataFactory.create(UtilBase64.getImagem(logoBase64)));
+        } else {
+            logo = new Image(ImageDataFactory.create(UtilBase64.getLogoBase64()));
+        }
+
         logo.setWidth(90.0F);
 
         // Create the header text
