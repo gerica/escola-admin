@@ -9,15 +9,12 @@ import com.escola.admin.model.entity.auxiliar.Turma;
 import com.escola.admin.model.mapper.auxiliar.TurmaMapper;
 import com.escola.admin.model.request.auxiliar.TurmaRequest;
 import com.escola.admin.model.request.report.FiltroRelatorioRequest;
-import com.escola.admin.model.request.report.MetadadosRelatorioRequest;
 import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.repository.auxiliar.TurmaRepository;
 import com.escola.admin.service.EmpresaService;
-import com.escola.admin.service.FileStorageService;
 import com.escola.admin.service.auxiliar.CursoService;
 import com.escola.admin.service.auxiliar.TurmaService;
-import com.escola.admin.service.report.ReportService;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.escola.admin.service.report.RelatorioBaseService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -43,8 +40,7 @@ public class TurmaServiceImpl implements TurmaService {
     TurmaMapper mapper;
     EmpresaService empresaService;
     CursoService cursoService;
-    ReportService<Turma> reportService;
-    FileStorageService storageService;
+    RelatorioBaseService relatorioBaseService;
 
     @Override
     public Mono<Turma> save(TurmaRequest request) {
@@ -246,70 +242,16 @@ public class TurmaServiceImpl implements TurmaService {
     }
 
     public Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, Usuario usuario) {
-        // 1. Encontra os clientes e retorna um Mono<Page<Cliente>>.
-        // Usar Mono.justOrEmpty para lidar com o Optional.
-        return Mono.justOrEmpty(findByFiltro(request.filtro(), null, usuario.getEmpresaIdFromToken(), null))
-                .flatMap(entitiesPage -> {
-                    // 2. Busca a empresa do usuário. A partir daqui, o fluxo é garantido.
-                    return empresaService.findById(usuario.getEmpresaIdFromToken())
-                            .flatMap(empresa -> {
-                                // 3. Define a busca do logo. Se o logo for nulo, retorna um Mono vazio.
-                                // Isso evita a chamada ao storageService.
-                                Mono<String> logoMono = (empresa.getLogo() != null)
-                                        ? storageService.getFileAsBase64(empresa.getLogo().getUuid())
-                                        .doOnError(e -> log.error("Arquivo do logo não encontrado para a empresa com ID {}: {}", empresa.getId(), e.getMessage(), e))
-                                        .onErrorResume(e -> Mono.just("")) // Resiliência: retorna vazio em caso de erro
-                                        : Mono.just(""); // Se não tiver logo, emite uma string vazia imediatamente
-
-                                // 4. Combina os resultados do cliente e do logo para gerar o relatório.
-                                return logoMono.flatMap(logoBase64 ->
-                                        this.generateReport(request, entitiesPage.getContent(), usuario, empresa.getNomeFantasia(), logoBase64)
-                                );
-                            })
-                            .switchIfEmpty(
-                                    // 5. Se a empresa não for encontrada ou o ID for nulo, gera o relatório com um nome genérico e sem logo.
-                                    // Isso lida com o caso em que usuario.getEmpresaIdFromToken() é nulo
-                                    this.generateReport(request, entitiesPage.getContent(), usuario, "Escolar", null)
-                            )
-                            .doOnError(e -> log.error("Erro ao buscar a empresa com ID {}: {}", usuario.getEmpresaIdFromToken(), e.getMessage(), e));
-                })
-                .switchIfEmpty(Mono.empty()); // Retorna Mono.empty() se findByFiltro não encontrar nada
+        Mono<Page<Turma>> turmasMono = Mono.justOrEmpty(findByFiltro(request.filtro(), null, usuario.getEmpresaIdFromToken(), null));
+        return relatorioBaseService.emitirRelatorioGenerico(
+                turmasMono,
+                request,
+                usuario,
+                "Relatório de turmas", // Subtítulo
+                "turmas", // Nome do arquivo
+                Turma.class // Classe da entidade
+        );
     }
-
-    private Mono<RelatorioBase64Response> generateReport(
-            FiltroRelatorioRequest request,
-            List<Turma> entities,
-            Usuario usuario,
-            String empresaNome,
-            String logoBase64) {
-        // 5. Unifica a lógica de geração do relatório em um método separado.
-        return Mono.fromCallable(() -> {
-            MetadadosRelatorioRequest metadados = MetadadosRelatorioRequest.builder()
-                    .nomeUsuario("%s %s".formatted(usuario.getFirstname(), usuario.getLastname()))
-                    .titulo("Sistema de Gestão: " + empresaNome)
-                    .subtitulo("Relatório de turmas")
-                    .logoBase64(logoBase64.isBlank() ? null : logoBase64) // Garante que a string vazia seja tratada como nula
-                    .nomeArquivo("turma")
-                    .build();
-
-            // 6. A lógica de geração de relatório continua a mesma, mas agora está em um só lugar.
-            ObjectNode jsonNodes = reportService.generateReport(request.tipo(), entities, metadados, Turma.class);
-
-            String nomeArquivo = jsonNodes.get("filename").asText();
-            String conteudoBase64 = jsonNodes.get("content").asText();
-            return new RelatorioBase64Response(nomeArquivo, conteudoBase64);
-
-        }).onErrorResume(BaseException.class, e -> {
-            // Trata exceções específicas
-            log.error("Erro no processamento do relatório: {}", e.getMessage(), e);
-            return Mono.error(e);
-        }).onErrorResume(Exception.class, e -> {
-            // Trata outras exceções
-            log.error("Erro desconhecido no processamento do relatório: {}", e.getMessage(), e);
-            return Mono.error(new RuntimeException("Erro ao processar o relatório", e));
-        });
-    }
-
 
     private record EntitiesContext(Empresa empresa, Curso curso) {
     }

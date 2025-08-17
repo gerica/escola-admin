@@ -45,5 +45,5 @@ public interface ContratoService {
 
     Mono<ContratoBase64Response> downloadDocContrato(Long id);
 
-    Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, Usuario empresaIdFromToken);
+    Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, List<StatusContrato> status, Usuario empresaIdFromToken);
 }

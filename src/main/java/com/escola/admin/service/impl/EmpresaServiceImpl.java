@@ -7,16 +7,14 @@ import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.EmpresaMapper;
 import com.escola.admin.model.request.EmpresaRequest;
 import com.escola.admin.model.request.report.FiltroRelatorioRequest;
-import com.escola.admin.model.request.report.MetadadosRelatorioRequest;
 import com.escola.admin.model.response.EmpresaResponse;
 import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.repository.EmpresaRepository;
 import com.escola.admin.repository.UsuarioRepository;
 import com.escola.admin.service.EmpresaService;
 import com.escola.admin.service.FileStorageService;
-import com.escola.admin.service.report.ReportService;
+import com.escola.admin.service.report.RelatorioBaseService;
 import com.escola.admin.util.HashUtils;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -41,8 +38,8 @@ public class EmpresaServiceImpl implements EmpresaService {
     EmpresaRepository repository;
     UsuarioRepository usuarioRepository;
     EmpresaMapper mapper;
-    ReportService<Empresa> reportService;
     FileStorageService storageService;
+    RelatorioBaseService relatorioBaseService;
 
     @Override
     @Transactional
@@ -128,33 +125,16 @@ public class EmpresaServiceImpl implements EmpresaService {
                 .flatMap(Mono::justOrEmpty);
     }
 
-    public Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request) {
-        Optional<Page<Empresa>> optional = findByFiltro(request.filtro(), null);
-        if (optional.isPresent()) {
-            Usuario usuarioRequest = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            try {
-                MetadadosRelatorioRequest metadados = MetadadosRelatorioRequest.builder()
-                        .nomeUsuario("%s %s".formatted(usuarioRequest.getFirstname(), usuarioRequest.getLastname()))
-                        .titulo("Sistema de Gestão Escolar")
-                        .subtitulo("Relatório de empresas")
-                        .nomeArquivo("empresas.pdf")
-                        .build();
-                ObjectNode jsonNodes = reportService.generateReport(request.tipo(), optional.get().getContent(), metadados, Empresa.class);
-
-                // Extrai os campos do ObjectNode e cria a resposta
-                String nomeArquivo = jsonNodes.get("filename").asText();
-                String conteudoBase64 = jsonNodes.get("content").asText();
-                RelatorioBase64Response response = new RelatorioBase64Response(nomeArquivo, conteudoBase64);
-
-                return Mono.just(response);
-            } catch (BaseException e) {
-                return Mono.error(e);
-            } catch (Exception e) {
-                return Mono.error(new RuntimeException("Erro ao processar o relatório", e));
-            }
-        }
-        // Caso a lista de empresas esteja vazia, retorna um Mono vazio ou um erro
-        return Mono.empty();
+    public Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, Usuario usuario) {
+        Mono<Page<Empresa>> entitiesMono = Mono.justOrEmpty(findByFiltro(request.filtro(), null));
+        return relatorioBaseService.emitirRelatorioGenerico(
+                entitiesMono,
+                request,
+                usuario,
+                "Relatório de empresas", // Subtítulo
+                "empresas", // Nome do arquivo
+                Empresa.class // Classe da entidade
+        );
     }
 
     private Mono<Void> validateRequest(EmpresaRequest request) {

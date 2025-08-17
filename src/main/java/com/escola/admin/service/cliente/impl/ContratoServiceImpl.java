@@ -3,6 +3,7 @@ package com.escola.admin.service.cliente.impl;
 import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Parametro;
+import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.entity.auxiliar.Curso;
 import com.escola.admin.model.entity.auxiliar.Matricula;
 import com.escola.admin.model.entity.auxiliar.StatusMatricula;
@@ -12,16 +13,18 @@ import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.mapper.cliente.ContratoMapper;
 import com.escola.admin.model.request.cliente.ContratoModeloRequest;
 import com.escola.admin.model.request.cliente.ContratoRequest;
+import com.escola.admin.model.request.report.FiltroRelatorioRequest;
+import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.model.response.cliente.ContratoBase64Response;
 import com.escola.admin.repository.cliente.ContratoRepository;
 import com.escola.admin.service.EmpresaService;
-import com.escola.admin.service.ItextPdfConverterService;
 import com.escola.admin.service.ParametroService;
 import com.escola.admin.service.PdfConverterService;
 import com.escola.admin.service.auxiliar.CursoService;
 import com.escola.admin.service.auxiliar.MatriculaService;
 import com.escola.admin.service.cliente.ArtificalInteligenceService;
 import com.escola.admin.service.cliente.ContratoService;
+import com.escola.admin.service.report.RelatorioBaseService;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -59,7 +62,7 @@ public class ContratoServiceImpl implements ContratoService {
     EmpresaService empresaService;
     MatriculaService matriculaService;
     CursoService cursoService;
-    ItextPdfConverterService itextPdfConverterService;
+    RelatorioBaseService relatorioBaseService;
     PdfConverterService pdfConverterService;
 //    ArtificalInteligenceService chatgpt;
     //    ArtificalInteligenceService gemini;
@@ -190,8 +193,9 @@ public class ContratoServiceImpl implements ContratoService {
 
     @Override
     public Optional<Page<Contrato>> findByFiltro(String filtro, Long idEmpresa, List<StatusContrato> status, Pageable pageable) {
+        Pageable effectivePageable = (pageable != null) ? pageable : Pageable.unpaged();
         List<StatusContrato> statusParaFiltro = (status != null && status.isEmpty()) ? null : status;
-        return repository.findByFiltro(filtro, idEmpresa, statusParaFiltro, pageable);
+        return repository.findByFiltro(filtro, idEmpresa, statusParaFiltro, effectivePageable);
     }
 
     @Override
@@ -503,28 +507,21 @@ public class ContratoServiceImpl implements ContratoService {
                 .doOnError(e -> log.error("Falha ao baixar anexo: {}", e.getMessage(), e));
     }
 
+    public Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, List<StatusContrato> status, Usuario usuario) {
+        Mono<Page<Contrato>> entitiesMono = Mono.justOrEmpty(findByFiltro(request.filtro(), usuario.getEmpresaIdFromToken(), status, null));
+        return relatorioBaseService.emitirRelatorioGenerico(
+                entitiesMono,
+                request,
+                usuario,
+                "Relatório de clientes", // Subtítulo
+                "clientes", // Nome do arquivo
+                Contrato.class // Classe da entidade
+        );
+    }
+
     private record EntitiesContext(Matricula matricula, Empresa empresa
     ) {
     }
 
-//    public Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, Long empresaIdFromToken) {
-//        Optional<Page<Empresa>> optional = findByFiltro(request.filtro(), null);
-//        return optional.map(empresas -> findById(empresaIdFromToken).flatMap(empresa -> {
-//            try {
-//                ObjectNode jsonNodes = reportService.generateReport(request.tipo(), empresas.getContent(), Empresa.class);
-//
-//                // Extrai os campos do ObjectNode e cria a resposta
-//                String nomeArquivo = jsonNodes.get("filename").asText();
-//                String conteudoBase64 = jsonNodes.get("content").asText();
-//                RelatorioBase64Response response = new RelatorioBase64Response(nomeArquivo, conteudoBase64);
-//
-//                return Mono.just(response);
-//            } catch (BaseException e) {
-//                return Mono.error(e);
-//            } catch (Exception e) {
-//                return Mono.error(new RuntimeException("Erro ao processar o relatório", e));
-//            }
-//        })).orElseGet(Mono::empty);
-//    }
 
 }

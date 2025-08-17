@@ -122,13 +122,15 @@ public class ContratoController {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public Mono<RelatorioBase64Response> downloadListaContratos(@Argument FiltroRelatorioRequest request, Authentication authentication) {
+    public Mono<RelatorioBase64Response> downloadListaContratos(@Argument FiltroRelatorioRequest request,
+                                                                @Argument List<StatusContrato> status,
+                                                                Authentication authentication) {
         Object principal = authentication.getPrincipal();
         if (!(principal instanceof Usuario usuarioAutenticado)) {
             return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
         }
 
-        return contratoService.emitirRelatorio(request, usuarioAutenticado)
+        return contratoService.emitirRelatorio(request, status, usuarioAutenticado)
                 .onErrorResume(BaseException.class, Mono::error);
     }
 

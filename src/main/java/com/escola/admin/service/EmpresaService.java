@@ -1,6 +1,7 @@
 package com.escola.admin.service;
 
 import com.escola.admin.model.entity.Empresa;
+import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.request.EmpresaRequest;
 import com.escola.admin.model.request.report.FiltroRelatorioRequest;
 import com.escola.admin.model.response.EmpresaResponse;
@@ -27,5 +28,6 @@ public interface EmpresaService {
 
     Mono<Empresa> findEmpresaByUsuarioId(Long usuarioId);
 
-    Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request);
+    Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, Usuario usuarioÒ
+    );
 }

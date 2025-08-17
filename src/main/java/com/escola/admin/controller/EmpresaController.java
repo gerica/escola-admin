@@ -62,7 +62,11 @@ public class EmpresaController {
     @QueryMapping
     @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
     public Mono<RelatorioBase64Response> downloadListaEmpesas(@Argument FiltroRelatorioRequest request, Authentication authentication) {
-        return service.emitirRelatorio(request)
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
+        return service.emitirRelatorio(request, usuarioAutenticado)
                 .onErrorResume(BaseException.class, Mono::error);
     }
 

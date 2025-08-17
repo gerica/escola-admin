@@ -8,7 +8,6 @@ import com.escola.admin.model.mapper.EmpresaMapper;
 import com.escola.admin.model.mapper.UsuarioMapper;
 import com.escola.admin.model.request.UsuarioRequest;
 import com.escola.admin.model.request.report.FiltroRelatorioRequest;
-import com.escola.admin.model.request.report.MetadadosRelatorioRequest;
 import com.escola.admin.model.response.AuthenticationResponse;
 import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.repository.UsuarioRepository;
@@ -17,9 +16,8 @@ import com.escola.admin.service.EmailService;
 import com.escola.admin.service.EmpresaService;
 import com.escola.admin.service.FileStorageService;
 import com.escola.admin.service.UsuarioService;
-import com.escola.admin.service.report.ReportService;
+import com.escola.admin.service.report.RelatorioBaseService;
 import com.escola.admin.util.PasswordGenerator;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -52,7 +50,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     FileStorageService storageService;
     EmpresaMapper empresaMapper;
     JwtService jwtService;
-    ReportService<Usuario> reportService;
+    RelatorioBaseService relatorioBaseService;
 
     String MUTATION_SEND_EMAIL = """
             mutation SendOnboardingEmail($request: EmailRequest!) {
@@ -340,72 +338,15 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     public Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, Usuario usuario) {
-        // 1. O fluxo reativo começa aqui. Lida com a possibilidade de clientes não existirem.
-        return Mono.justOrEmpty(findByFiltroAndEmpresa(request.filtro(), usuario.getEmpresaIdFromToken(), null))
-                .switchIfEmpty(Mono.empty()) // Retorna um Mono.empty() se não houver clientes
-                .flatMap(entitiesPage -> {
-
-                    if (usuario.getEmpresaIdFromToken() == null) {
-                        return this.generateReport(request, entitiesPage.getContent(), usuario, "Escolar", null);
-                    }
-
-                    // 2. Tenta buscar a empresa do usuário. Se o ID for nulo ou a empresa não for encontrada,
-                    // o fluxo vai para o switchIfEmpty.
-                    return empresaService.findById(usuario.getEmpresaIdFromToken())
-                            .flatMap(empresa -> {
-                                // 3. Define a busca do logo de forma resiliente.
-                                Mono<String> logoMono = (empresa.getLogo() != null)
-                                        ? storageService.getFileAsBase64(empresa.getLogo().getUuid())
-                                        .doOnError(e -> log.error("Arquivo do logo não encontrado para a empresa com ID {}: {}", empresa.getId(), e.getMessage(), e))
-                                        .onErrorResume(e -> Mono.just(""))
-                                        : Mono.just("");
-
-                                // 4. Combina os resultados do logo e gera o relatório com os dados da empresa.
-                                return logoMono.flatMap(logoBase64 ->
-                                        this.generateReport(request, entitiesPage.getContent(), usuario, empresa.getNomeFantasia(), logoBase64)
-                                );
-                            })
-                            .switchIfEmpty(
-                                    // 5. Se a empresa não for encontrada ou o ID for nulo, gera o relatório com um nome genérico e sem logo.
-                                    // Isso lida com o caso em que usuario.getEmpresaIdFromToken() é nulo
-                                    this.generateReport(request, entitiesPage.getContent(), usuario, "Escolar", null)
-                            )
-                            .doOnError(e -> log.error("Erro ao buscar a empresa: {}", e.getMessage(), e));
-                });
-    }
-
-    private Mono<RelatorioBase64Response> generateReport(
-            FiltroRelatorioRequest request,
-            List<Usuario> entities,
-            Usuario usuario,
-            String empresaNome,
-            String logoBase64) {
-        // 5. Unifica a lógica de geração do relatório em um método separado.
-        return Mono.fromCallable(() -> {
-            MetadadosRelatorioRequest metadados = MetadadosRelatorioRequest.builder()
-                    .nomeUsuario("%s %s".formatted(usuario.getFirstname(), usuario.getLastname()))
-                    .titulo("Sistema de Gestão: " + empresaNome)
-                    .subtitulo("Relatório de usuários")
-                    .logoBase64(logoBase64 == null || logoBase64.isBlank() ? null : logoBase64) // Garante que a string vazia seja tratada como nula
-                    .nomeArquivo("usuarios")
-                    .build();
-
-            // 6. A lógica de geração de relatório continua a mesma, mas agora está em um só lugar.
-            ObjectNode jsonNodes = reportService.generateReport(request.tipo(), entities, metadados, Usuario.class);
-
-            String nomeArquivo = jsonNodes.get("filename").asText();
-            String conteudoBase64 = jsonNodes.get("content").asText();
-            return new RelatorioBase64Response(nomeArquivo, conteudoBase64);
-
-        }).onErrorResume(BaseException.class, e -> {
-            // Trata exceções específicas
-            log.error("Erro no processamento do relatório: {}", e.getMessage(), e);
-            return Mono.error(e);
-        }).onErrorResume(Exception.class, e -> {
-            // Trata outras exceções
-            log.error("Erro desconhecido no processamento do relatório: {}", e.getMessage(), e);
-            return Mono.error(new RuntimeException("Erro ao processar o relatório", e));
-        });
+        Mono<Page<Usuario>> entitiesMono = Mono.justOrEmpty(findByFiltro(request.filtro(), null));
+        return relatorioBaseService.emitirRelatorioGenerico(
+                entitiesMono,
+                request,
+                usuario,
+                "Relatório de usuários", // Subtítulo
+                "usuarios", // Nome do arquivo
+                Usuario.class // Classe da entidade
+        );
     }
 
     /**
