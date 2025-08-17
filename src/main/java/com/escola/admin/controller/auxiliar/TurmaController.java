@@ -7,6 +7,8 @@ import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.entity.auxiliar.StatusTurma;
 import com.escola.admin.model.mapper.auxiliar.TurmaMapper;
 import com.escola.admin.model.request.auxiliar.TurmaRequest;
+import com.escola.admin.model.request.report.FiltroRelatorioRequest;
+import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.model.response.auxiliar.TurmaResponse;
 import com.escola.admin.service.auxiliar.TurmaService;
 import lombok.AccessLevel;
@@ -128,6 +130,20 @@ public class TurmaController {
     public Mono<String> deleteTurmaById(@Argument Long id) {
         return turmaService.deleteById(id)
                 .then(Mono.just("Operação realizada com sucesso."))
+                .onErrorResume(BaseException.class, Mono::error);
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAnyAuthority('SUPER_ADMIN', 'ADMIN_EMPRESA')")
+    public Mono<RelatorioBase64Response> downloadListaTurmas(@Argument FiltroRelatorioRequest request,
+                                                               Authentication authentication) {
+
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
+
+        return turmaService.emitirRelatorio(request, usuarioAutenticado)
                 .onErrorResume(BaseException.class, Mono::error);
     }
 }

@@ -59,6 +59,7 @@ extend type Query {
         size: Int! = 10 # Valor padrão para o tamanho da página
         sort: [SortRequest] # Lista de critérios de ordenação
     ): TurmaResponsePage!
+    downloadListaTurmas(request: FiltroRelatorioRequest!): RelatorioBase64Response
 }
 
 extend type Mutation {

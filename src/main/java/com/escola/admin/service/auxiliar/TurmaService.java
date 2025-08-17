@@ -1,8 +1,11 @@
 package com.escola.admin.service.auxiliar;
 
+import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.entity.auxiliar.StatusTurma;
 import com.escola.admin.model.entity.auxiliar.Turma;
 import com.escola.admin.model.request.auxiliar.TurmaRequest;
+import com.escola.admin.model.request.report.FiltroRelatorioRequest;
+import com.escola.admin.model.response.RelatorioBase64Response;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Mono;
@@ -21,5 +24,7 @@ public interface TurmaService {
     Mono<Void> deleteById(Long id);
 
     Mono<Void> delete(Turma entity);
+
+    Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, Usuario empresaIdFromToken);
 
 }

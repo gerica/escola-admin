@@ -2,6 +2,7 @@ package com.escola.admin.service.report;
 
 import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Usuario;
+import com.escola.admin.model.entity.auxiliar.Turma;
 import com.escola.admin.model.entity.cliente.Cliente;
 import com.escola.admin.util.pdf.LocalPdfUtil;
 import org.springframework.context.annotation.Bean;
@@ -54,7 +55,7 @@ public class ReportPdfConfig {
     public GenericReportPdf<Usuario> reportUsuarioPdf(LocalPdfUtil pdfUtil) {
         return new GenericReportPdf<>(
                 pdfUtil,
-                new String[]{"Nome", "Usuároi", "Empresa", "E-mail", "Papeis"},
+                new String[]{"Nome", "Usuário", "Empresa", "E-mail", "Papeis"},
                 new Integer[]{20, 20, 20, 10, 30},
                 entity -> new String[]{
                         "%s %s".formatted(entity.getFirstname(), entity.getLastname()),
@@ -64,6 +65,24 @@ public class ReportPdfConfig {
                         entity.getRoles().stream()
                                 .map(Enum::toString)
                                 .collect(Collectors.joining(", "))
+                }
+        );
+    }
+
+    @Bean("reportTurmaPDF")
+    public GenericReportPdf<Turma> reportTurmaPdf(LocalPdfUtil pdfUtil) {
+        return new GenericReportPdf<>(
+                pdfUtil,
+                new String[]{"Código", "Nome", "Curso", "Período", "Professor(a)", "Status"},
+                new Integer[]{20, 20, 20, 10, 20,10},
+                entity -> new String[]{
+                        entity.getCodigo(),
+                        entity.getNome(),
+                        entity.getCurso().getNome(),
+                        entity.getAnoPeriodo(),
+                        entity.getProfessor(),
+                        entity.getStatus().toString(),
+
                 }
         );
     }

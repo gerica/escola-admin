@@ -37,7 +37,7 @@ public class GenericReportOds<T> implements ReportGenerator<T> {
 
         // Create the response object
         ObjectNode arquivo = mapper.createObjectNode();
-        arquivo.put("filename", titulo + ".ods");
+        arquivo.put("filename", metadados.nomeArquivo() + ".ods");
         arquivo.put("filetype", ReportService.APPLICATION_ODS);
         arquivo.set("content", new BinaryNode(planilha));
         return arquivo;

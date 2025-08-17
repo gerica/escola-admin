@@ -201,7 +201,7 @@ public class ClienteServiceImpl implements ClienteService {
                     .titulo("Sistema de Gestão: " + empresaNome)
                     .subtitulo("Relatório de clientes")
                     .logoBase64(logoBase64.isBlank() ? null : logoBase64) // Garante que a string vazia seja tratada como nula
-                    .nomeArquivo("clientes.pdf")
+                    .nomeArquivo("clientes")
                     .build();
 
             // 6. A lógica de geração de relatório continua a mesma, mas agora está em um só lugar.

@@ -2,6 +2,7 @@ package com.escola.admin.service.report;
 
 import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Usuario;
+import com.escola.admin.model.entity.auxiliar.Turma;
 import com.escola.admin.model.entity.cliente.Cliente;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -77,6 +78,27 @@ public class ReportOdsConfig {
                             .map(Enum::toString)
                             .collect(Collectors.joining(", ")));
 
+                    return lineNode;
+                }
+        );
+    }
+
+    @Bean("reportTurmaODS")
+    public GenericReportOds<Turma> reportTurmaOds() {
+        return new GenericReportOds<>(
+                "Relatório de Usuários",
+                Arrays.asList("Código", "Nome", "Curso", "Período", "Professor(a)", "Status"),
+                Arrays.asList("codigo", "nome", "curso", "periodo", "professor", "status"),
+
+                entity -> {
+                    ObjectMapper mapper = new ObjectMapper();
+                    ObjectNode lineNode = mapper.createObjectNode();
+                    lineNode.put("codigo", entity.getCodigo());
+                    lineNode.put("nome", entity.getNome());
+                    lineNode.put("curso", entity.getCurso().getNome());
+                    lineNode.put("periodo", entity.getAnoPeriodo());
+                    lineNode.put("professor", entity.getProfessor());
+                    lineNode.put("status", entity.getStatus().toString());
                     return lineNode;
                 }
         );
