@@ -67,6 +67,7 @@ extend type Query {
     fetchById(id: ID): ContratoResponse!
     fetchContratoByIdMatricula(id: ID): ContratoResponse!
     downloadDocContrato(id: ID!): ContratoBase64Response!
+    downloadListaContratos(request: FiltroRelatorioRequest!): RelatorioBase64Response
 }
 
 extend type Mutation {

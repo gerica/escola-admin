@@ -1,11 +1,14 @@
 package com.escola.admin.service.cliente;
 
 
+import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.entity.auxiliar.Matricula;
 import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.request.cliente.ContratoModeloRequest;
 import com.escola.admin.model.request.cliente.ContratoRequest;
+import com.escola.admin.model.request.report.FiltroRelatorioRequest;
+import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.model.response.cliente.ContratoBase64Response;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -41,4 +44,6 @@ public interface ContratoService {
     Mono<BigDecimal> getValorMensalidadePorContratoId(Long idContrato);
 
     Mono<ContratoBase64Response> downloadDocContrato(Long id);
+
+    Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, Usuario empresaIdFromToken);
 }

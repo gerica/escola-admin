@@ -8,6 +8,8 @@ import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.mapper.cliente.ContratoMapper;
 import com.escola.admin.model.request.cliente.ContratoModeloRequest;
 import com.escola.admin.model.request.cliente.ContratoRequest;
+import com.escola.admin.model.request.report.FiltroRelatorioRequest;
+import com.escola.admin.model.response.RelatorioBase64Response;
 import com.escola.admin.model.response.cliente.ContratoBase64Response;
 import com.escola.admin.model.response.cliente.ContratoResponse;
 import com.escola.admin.service.cliente.ContratoService;
@@ -115,6 +117,18 @@ public class ContratoController {
     @PreAuthorize("isAuthenticated()")
     public Mono<ContratoBase64Response> downloadDocContrato(@Argument Long id) {
         return contratoService.downloadDocContrato(id)
+                .onErrorResume(BaseException.class, Mono::error);
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    public Mono<RelatorioBase64Response> downloadListaContratos(@Argument FiltroRelatorioRequest request, Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof Usuario usuarioAutenticado)) {
+            return Mono.error(new IllegalStateException("Principal não é do tipo Usuario."));
+        }
+
+        return contratoService.emitirRelatorio(request, usuarioAutenticado)
                 .onErrorResume(BaseException.class, Mono::error);
     }
 
