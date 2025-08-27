@@ -4,6 +4,9 @@ import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.entity.auxiliar.Turma;
 import com.escola.admin.model.entity.cliente.Cliente;
+import com.escola.admin.model.entity.cliente.Contrato;
+import com.escola.admin.util.DataUtils;
+import com.escola.admin.util.MoedaUtils;
 import com.escola.admin.util.pdf.LocalPdfUtil;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,7 +42,7 @@ public class ReportPdfConfig {
                 new Integer[]{20, 10, 10, 10, 10, 10, 10, 10, 10},
                 entity -> new String[]{
                         entity.getNome(),
-                        entity.getDataNascimento().toString(),
+                        DataUtils.formatar(entity.getDataNascimento()),
                         entity.getDocCPF(),
                         entity.getDocRG(),
                         entity.getEndereco(),
@@ -74,7 +77,7 @@ public class ReportPdfConfig {
         return new GenericReportPdf<>(
                 pdfUtil,
                 new String[]{"Código", "Nome", "Curso", "Período", "Professor(a)", "Status"},
-                new Integer[]{20, 20, 20, 10, 20,10},
+                new Integer[]{20, 20, 20, 10, 20, 10},
                 entity -> new String[]{
                         entity.getCodigo(),
                         entity.getNome(),
@@ -82,6 +85,33 @@ public class ReportPdfConfig {
                         entity.getAnoPeriodo(),
                         entity.getProfessor(),
                         entity.getStatus().toString(),
+
+                }
+        );
+    }
+
+    @Bean("reportContratoPDF")
+    public GenericReportPdf<Contrato> reportContratoPdf(LocalPdfUtil pdfUtil) {
+        return new GenericReportPdf<>(
+                pdfUtil,
+                new String[]{"Número do Contrato",
+                        "Cliente",
+                        "Data início",
+                        "Data fim",
+                        "Valor",
+                        "Status",
+                        "Período Pagamento",
+                        "Descrição"},
+                new Integer[]{10, 20, 7, 7, 7, 7, 10, 32},
+                entity -> new String[]{
+                        entity.getNumeroContrato(),
+                        entity.getCliente().getNome(),
+                        DataUtils.formatar(entity.getDataInicio()),
+                        DataUtils.formatar(entity.getDataFim()),
+                        MoedaUtils.formatarParaReal(entity.getValorTotal()),
+                        entity.getStatusContrato().toString(),
+                        entity.getPeriodoPagamento(),
+                        entity.getObservacoes(),
 
                 }
         );

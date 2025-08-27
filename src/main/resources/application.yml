@@ -62,6 +62,7 @@ spring:
   jackson:
     default-property-inclusion: ALWAYS
 
+  # Spring DevTools para hot-reloading em desenvolvimento
   devtools:
     restart:
       poll-interval: 2s
@@ -70,12 +71,6 @@ spring:
 #    NON_NULL: (O que você usou) Exclui propriedades que têm valor null.
 #    NON_EMPTY: Exclui propriedades que são null ou vazias (strings vazias, coleções vazias, etc.).
 #    NON_ABSENT: Exclui propriedades que são null ou Optional.empty().
-
-  # Spring DevTools para hot-reloading em desenvolvimento
-#  devtools:
-#    restart:
-#      poll-interval: 2s
-#      quiet-period: 1s
 
 # Configuração do cliente Eureka para Service Discovery
 eureka:

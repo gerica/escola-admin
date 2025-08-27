@@ -513,8 +513,8 @@ public class ContratoServiceImpl implements ContratoService {
                 entitiesMono,
                 request,
                 usuario,
-                "Relatório de clientes", // Subtítulo
-                "clientes", // Nome do arquivo
+                "Relatório de contratos", // Subtítulo
+                "contratos", // Nome do arquivo
                 Contrato.class // Classe da entidade
         );
     }

@@ -5,6 +5,7 @@ import com.escola.admin.exception.BaseException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -93,6 +94,18 @@ public class DataUtils {
             return false; // Handle null case safely
         }
         return dataB.after(dataA);
+    }
+
+    public static String formatar(LocalDate date) {
+        return formatar(date, DD_MM_YYYY);
+    }
+
+    public static String formatar(LocalDate date, String format) {
+        if (date == null) {
+            return null; // ou retorne uma string vazia, dependendo da sua necessidade
+        }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
+        return date.format(formatter);
     }
 
 }

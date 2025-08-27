@@ -4,6 +4,9 @@ import com.escola.admin.model.entity.Empresa;
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.entity.auxiliar.Turma;
 import com.escola.admin.model.entity.cliente.Cliente;
+import com.escola.admin.model.entity.cliente.Contrato;
+import com.escola.admin.util.DataUtils;
+import com.escola.admin.util.MoedaUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.context.annotation.Bean;
@@ -99,6 +102,43 @@ public class ReportOdsConfig {
                     lineNode.put("periodo", entity.getAnoPeriodo());
                     lineNode.put("professor", entity.getProfessor());
                     lineNode.put("status", entity.getStatus().toString());
+                    return lineNode;
+                }
+        );
+    }
+
+    @Bean("reportContratoODS")
+    public GenericReportOds<Contrato> reportContratoOds() {
+        return new GenericReportOds<>(
+                "Relatório de Contratos",
+                Arrays.asList("Número do Contrato",
+                        "Cliente",
+                        "Data início",
+                        "Data fim",
+                        "Valor",
+                        "Status",
+                        "Período Pagamento",
+                        "Descrição"),
+                Arrays.asList("numero_contrato",
+                        "cliente",
+                        "data_inicio",
+                        "data_fim",
+                        "valor",
+                        "status",
+                        "periodo_pagamento",
+                        "descricao"),
+
+                entity -> {
+                    ObjectMapper mapper = new ObjectMapper();
+                    ObjectNode lineNode = mapper.createObjectNode();
+                    lineNode.put("numero_contrato", entity.getNumeroContrato());
+                    lineNode.put("cliente", entity.getCliente().getNome());
+                    lineNode.put("data_inicio", DataUtils.formatar(entity.getDataInicio()));
+                    lineNode.put("data_fim", DataUtils.formatar(entity.getDataFim()));
+                    lineNode.put("valor", MoedaUtils.formatarParaReal(entity.getValorTotal()));
+                    lineNode.put("status", entity.getStatusContrato().toString());
+                    lineNode.put("periodo_pagamento", entity.getPeriodoPagamento());
+                    lineNode.put("descricao", entity.getObservacoes());
                     return lineNode;
                 }
         );

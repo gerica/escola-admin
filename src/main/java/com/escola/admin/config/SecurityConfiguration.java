@@ -57,7 +57,7 @@ public class SecurityConfiguration {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // Define as origens permitidas (seu frontend Angular, gateway, etc.)
-        configuration.setAllowedOrigins(List.of("http://localhost:4200", "http://localhost:8080"));
+        configuration.setAllowedOrigins(List.of("http://localhost:4200", "http://localhost:8080", "https://237d072406e2.ngrok-free.app"));
 
         // Define os métodos HTTP permitidos para uma API GraphQL
         // POST: Para queries e mutations.
