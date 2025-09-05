@@ -4,11 +4,14 @@ import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.entity.cliente.ContaReceber;
 import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.entity.cliente.StatusContaReceber;
+import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.mapper.cliente.ContaReceberMapper;
 import com.escola.admin.model.request.cliente.ContaReceberRequest;
+import com.escola.admin.model.response.cliente.ContaReceberPorMesResumeResponse;
 import com.escola.admin.repository.cliente.ContaReceberRepository;
 import com.escola.admin.service.cliente.ContaReceberService;
 import com.escola.admin.service.cliente.ContratoService;
+import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -49,11 +52,14 @@ public class ContaReceberServiceImpl implements ContaReceberService {
     }
 
     @Override
+    @Transactional
     public Mono<ContaReceber> save(ContaReceberRequest request) {
         return validateRequest(request)
-                .then(getRequiredEntities(request))
+                .then(getRequiredEntities(request.idContrato()))
                 .flatMap(contrato -> updateOrCreate(request, contrato))
-                .flatMap(this::persist)
+                .flatMap(context -> persist(context.contaReceber)
+                        .map(contaReceber -> new EntitiesContext(context.contrato, contaReceber)))
+                .flatMap(this::alterarStatusParaPagoContrato)
                 .doOnSuccess(savedEntity -> log.info("Conta a receber salva com sucesso. ID: {}", savedEntity.getId()))
                 .doOnError(e -> log.error("Falha na operação de salvar conta a receber: {}", e.getMessage(), e))
                 .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
@@ -115,6 +121,68 @@ public class ContaReceberServiceImpl implements ContaReceberService {
 
                     return persistirParcelas(parcelas, contrato.getId());
                 });
+    }
+
+    @Override
+    public Mono<Void> deletarContaEAtualizarContrato(Long idConta) {
+        // 1. Busca a conta a receber primeiro
+        return findById(idConta)
+                .flatMap(contaReceber -> {
+                    // 2. Com a conta encontrada, busca o contrato e cria o contexto
+                    return getRequiredEntities(contaReceber.getContrato().getId())
+                            .map(contrato -> new EntitiesContext(contrato, contaReceber));
+                })
+                .flatMap(context -> {
+                    // 3. Dentro de outro flatMap, encadeia as operações
+                    // Garante que a deleção ocorra primeiro
+                    return deleteById(idConta)
+                            // Em seguida, após a deleção, executa a alteração de status
+                            .then(alterarStatusParaPagoContrato(context));
+                })
+                // O Mono retornado por alterarStatusParaPagoContrato é um Mono<ContaReceber>.
+                // Para fazer com que o método retorne Mono<Void>, você precisa do .then() no final.
+                .then()
+                // 4. Logging e tratamento de erro
+                .doOnSuccess(v -> log.info("Operação de exclusão da conta com ID {} e alteração de status do contrato concluída com sucesso.", idConta))
+                .doOnError(e -> log.error("Erro na operação completa: {}", e.getMessage(), e))
+                .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
+                .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException);
+    }
+
+    @Override
+    public Mono<ContaReceberPorMesResumeResponse> fetchResumoByMes(LocalDate dataRef) {
+        return Mono.fromCallable(() -> {
+                    // 1. Calcula o início e o fim do mês a partir da data de referência
+                    final LocalDate inicioDoMes = dataRef.with(TemporalAdjusters.firstDayOfMonth());
+                    final LocalDate fimDoMes = dataRef.with(TemporalAdjusters.lastDayOfMonth());
+
+                    // 2. Chama o repositório com as novas datas
+                    List<ContaReceber> contas = repository
+                            .findByMesAndContratoStatus(inicioDoMes, fimDoMes, StatusContrato.ATIVO)
+                            .orElse(Collections.emptyList());
+
+                    // 2. Processa a lista de contas para calcular os valores de resumo.
+                    // Usamos Streams para somar os valores de forma concisa e eficiente.
+                    BigDecimal totalAReceber = contas.stream()
+                            .map(ContaReceber::getValorTotal)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    BigDecimal totalPago = contas.stream()
+                            // 1. Filtra a lista para manter apenas as contas com valorPago não-nulo.
+                            .filter(conta -> conta.getValorPago() != null)
+                            // 2. Mapeia para o valor do campo.
+                            .map(ContaReceber::getValorPago)
+                            // 3. Reduz a lista de valores a uma soma.
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    // 3. Cria e retorna a resposta com os valores calculados.
+                    // O Mono agora tem um valor de retorno, que é o objeto de resposta.
+                    return new ContaReceberPorMesResumeResponse(dataRef, totalAReceber, totalPago, totalAReceber.subtract(totalPago));
+                })
+                // 2. Operadores de "efeitos colaterais" para sucesso ou erro
+                .doOnSuccess(resumo -> log.info("Resumo do mês de {} de {} gerado com sucesso.", dataRef.getMonth(), dataRef.getYear()))
+                .doOnError(e -> log.error("Falha ao gerar o resumo do mês: {}", e.getMessage(), e))                // 3. Operadores para mapeamento de erros (conforme sua necessidade)
+                .onErrorMap(e -> !(e instanceof BaseException), e -> new BaseException("Falha ao gerar o resumo do mês: %s".formatted(e.getMessage()), e));
     }
 
     /**
@@ -198,28 +266,27 @@ public class ContaReceberServiceImpl implements ContaReceberService {
         return Mono.empty();
     }
 
-    private Mono<Contrato> getRequiredEntities(ContaReceberRequest request) {
-        return contratoService.findById(request.idContrato());
+    private Mono<Contrato> getRequiredEntities(Long idContrato) {
+        return contratoService.findById(idContrato);
     }
 
-    private Mono<ContaReceber> updateOrCreate(ContaReceberRequest request, Contrato contrato) {
+    private Mono<EntitiesContext> updateOrCreate(ContaReceberRequest request, Contrato contrato) {
         return Mono.justOrEmpty(request.id())
                 .flatMap(this::findById)
                 .map(existingEntity -> {
                     log.info("Atualizando contrato existente com ID: {}", existingEntity.getId());
                     mapper.updateEntity(request, existingEntity);
                     alterarStatusParaPago(existingEntity);
-                    return existingEntity;
+                    return new EntitiesContext(contrato, existingEntity);
                 })
                 .switchIfEmpty(Mono.defer(() -> {
                     log.info("Criando nova conta a receber para o contrato '{}'", contrato.getId());
                     ContaReceber entity = mapper.toEntity(request);
                     entity.setContrato(contrato);
                     entity.setStatus(StatusContaReceber.ABERTA);
-                    return Mono.just(entity);
+                    return Mono.just(new EntitiesContext(contrato, entity));
                 }));
     }
-
 
     private void alterarStatusParaPago(ContaReceber existingEntity) {
         // A conta é considerada PAGA se o valor pago for maior ou igual ao valor total.
@@ -243,9 +310,23 @@ public class ContaReceberServiceImpl implements ContaReceberService {
         return Mono.fromCallable(() -> repository.save(entity)).subscribeOn(Schedulers.boundedElastic());
     }
 
+    private Mono<ContaReceber> alterarStatusParaPagoContrato(EntitiesContext context) {
+        return findByFiltro(context.contrato.getId())
+                .flatMap(lista -> contratoService.alterarStatus(context.contrato, lista))
+                .then(Mono.just(context.contaReceber))
+                .doOnSuccess(savedEntity -> log.info("O contrato com o ID: {} foi alterado o status", context.contrato.getId()))
+                .doOnError(e -> log.error("Falha na operação de alterar o status do contrato: {}", e.getMessage(), e))
+                .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
+                .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException);
+    }
+
     private Throwable handleDataIntegrityViolation(DataIntegrityViolationException e) {
         log.warn("Violação de integridade de dados ao salvar conta a receber: {}", e.getMessage());
         String errorMessage = "Erro de integridade de dados ao salvar o conta a receber.";
         return new BaseException(errorMessage, e);
+    }
+
+    private record EntitiesContext(Contrato contrato, ContaReceber contaReceber
+    ) {
     }
 }

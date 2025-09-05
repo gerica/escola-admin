@@ -24,6 +24,13 @@ type ContaReceberResponse {
     dataAtualizaca: Date
 }
 
+type ContaReceberPorMesResumeResponse{
+    dataRef: Date
+    totalEsperado: BigDecimal
+    totalRecebido: BigDecimal
+    totalEmAberto: BigDecimal
+}
+
 # Define a estrutura de uma página de Anexos
 type ContaReceberResponsePage {
     content: [ContaReceberResponse!]!
@@ -39,6 +46,7 @@ type ContaReceberResponsePage {
 extend type Query {
     fetchAllContasReceber(idContrato: ID!): [ContaReceberResponse]!
     fetchByIdContaReceber(id: ID): ContaReceberResponse!
+    fetchResumoByMes(dataRef: Date!): ContaReceberPorMesResumeResponse!
 }
 
 extend type Mutation {

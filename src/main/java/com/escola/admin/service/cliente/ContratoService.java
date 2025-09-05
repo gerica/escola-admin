@@ -3,6 +3,7 @@ package com.escola.admin.service.cliente;
 
 import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.entity.auxiliar.Matricula;
+import com.escola.admin.model.entity.cliente.ContaReceber;
 import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.request.cliente.ContratoModeloRequest;
@@ -46,4 +47,6 @@ public interface ContratoService {
     Mono<ContratoBase64Response> downloadDocContrato(Long id);
 
     Mono<RelatorioBase64Response> emitirRelatorio(FiltroRelatorioRequest request, List<StatusContrato> status, Usuario empresaIdFromToken);
+
+    Mono<Void> alterarStatus(Contrato contrato, List<ContaReceber> contasReceber);
 }

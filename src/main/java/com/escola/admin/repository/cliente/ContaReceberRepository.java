@@ -1,6 +1,7 @@
 package com.escola.admin.repository.cliente;
 
 import com.escola.admin.model.entity.cliente.ContaReceber;
+import com.escola.admin.model.entity.cliente.StatusContrato;
 import jakarta.persistence.QueryHint;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -23,5 +24,21 @@ public interface ContaReceberRepository extends JpaRepository<ContaReceber, Long
             @QueryHint(name = "org.hibernate.comment", value = "Recuperar contratos utilizando um filtro.\"")
     })
     Optional<List<ContaReceber>> findByIdContrato(@Param("idContrato") Long idCntrato);
+
+    @Query(value = "SELECT cr FROM ContaReceber cr " +
+            "JOIN FETCH cr.contrato c " +
+            "WHERE cr.dataVencimento BETWEEN :inicioDoMes AND :fimDoMes " +
+            "AND c.statusContrato = :statusContrato")
+    @QueryHints(value = {
+            @QueryHint(name = "javax.persistence.query.timeout", value = "5000"),
+            @QueryHint(name = "jakarta.persistence.cache.retrieveMode", value = "USE"),
+            @QueryHint(name = "jakarta.persistence.cache.storeMode", value = "USE"),
+            @QueryHint(name = "org.hibernate.comment", value = "Recupera todas as contas a receber de contratos ativos em um determinado mês e ano.")
+    })
+    Optional<List<ContaReceber>> findByMesAndContratoStatus(
+            @Param("inicioDoMes") java.time.LocalDate inicioDoMes,
+            @Param("fimDoMes") java.time.LocalDate fimDoMes,
+            @Param("statusContrato") StatusContrato statusContrato
+    );
 
 }

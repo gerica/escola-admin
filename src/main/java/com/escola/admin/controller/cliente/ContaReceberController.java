@@ -4,6 +4,7 @@ import com.escola.admin.controller.help.PageableHelp;
 import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.mapper.cliente.ContaReceberMapper;
 import com.escola.admin.model.request.cliente.ContaReceberRequest;
+import com.escola.admin.model.response.cliente.ContaReceberPorMesResumeResponse;
 import com.escola.admin.model.response.cliente.ContaReceberResponse;
 import com.escola.admin.service.cliente.ContaReceberService;
 import graphql.GraphQLException;
@@ -18,6 +19,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 
 @Controller
@@ -28,6 +31,7 @@ public class ContaReceberController {
 
     public static final String SUCESSO = "Sucesso";
     ContaReceberMapper mapper;
+//    ContaReceberMapper mapper;
     ContaReceberService service;
     PageableHelp pageableHelp;
 
@@ -63,10 +67,16 @@ public class ContaReceberController {
     @MutationMapping
     @PreAuthorize("hasAnyAuthority('FINANCEIRO', 'ADMIN_EMPRESA')")
     public Mono<String> apagarContaReceber(@Argument Long id) {
-        return service.deleteById(id)
+        return service.deletarContaEAtualizarContrato(id)
                 .then(Mono.just("Operação realizada com sucesso."))
                 .onErrorResume(e -> Mono.error(new GraphQLException("Falha realizar operação: " + e.getMessage())));
 
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAnyAuthority('FINANCEIRO', 'ADMIN_EMPRESA')")
+    public Mono<ContaReceberPorMesResumeResponse> fetchResumoByMes(@Argument LocalDate dataRef) {
+        return service.fetchResumoByMes(dataRef);
     }
 
 }

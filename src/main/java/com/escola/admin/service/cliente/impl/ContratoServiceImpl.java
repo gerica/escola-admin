@@ -8,6 +8,7 @@ import com.escola.admin.model.entity.auxiliar.Curso;
 import com.escola.admin.model.entity.auxiliar.Matricula;
 import com.escola.admin.model.entity.auxiliar.StatusMatricula;
 import com.escola.admin.model.entity.cliente.Cliente;
+import com.escola.admin.model.entity.cliente.ContaReceber;
 import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.mapper.cliente.ContratoMapper;
@@ -517,6 +518,60 @@ public class ContratoServiceImpl implements ContratoService {
                 "contratos", // Nome do arquivo
                 Contrato.class // Classe da entidade
         );
+    }
+
+    @Override
+    public Mono<Void> alterarStatus(Contrato contrato, List<ContaReceber> contasReceber) {
+        BigDecimal totalPago = BigDecimal.ZERO;
+        for (ContaReceber conta : contasReceber) {
+            if (conta.getValorPago() != null) {
+                totalPago = totalPago.add(conta.getValorPago());
+            }
+        }
+
+        if (getValorFinalComDesconto(contrato).compareTo(totalPago) <= 0) {
+            contrato.setStatusContrato(StatusContrato.CONCLUIDO);
+        } else if (StatusContrato.CONCLUIDO.equals(contrato.getStatusContrato())) {
+            contrato.setStatusContrato(StatusContrato.ATIVO);
+        } else {
+            return Mono.empty();
+        }
+
+        return this.persist(contrato)
+                .flatMap(this::alterarStatusMatricula)
+                .doOnSuccess(savedEntity -> log.info("Status do contrao. ID: {} alterado com sucesso para: {}", savedEntity.getId(), contrato.getStatusContrato()))
+                .doOnError(e -> log.error("Falha na operação de salvar contrato: {}", e.getMessage(), e))
+                .onErrorMap(DataIntegrityViolationException.class, this::handleDataIntegrityViolation)
+                .onErrorMap(e -> !(e instanceof BaseException), BaseException::handleGenericException)
+                .then();
+    }
+
+    /**
+     * Calcula e retorna o valor final do contrato após aplicar o desconto em porcentagem.
+     *
+     * @return O valor do contrato com o desconto aplicado, ou o valor total se o desconto
+     * não for um valor válido (entre 0 e 100).
+     */
+    public BigDecimal getValorFinalComDesconto(Contrato contrato) {
+        // 1. Verifica se o desconto é um valor válido (entre 0 e 100)
+        // Isso evita descontos negativos ou acima de 100%, que não fariam sentido.
+        if (contrato.getDesconto() == null || contrato.getDesconto().compareTo(BigDecimal.ZERO) < 0 || contrato.getDesconto().compareTo(new BigDecimal("100")) > 0) {
+            log.info("Atenção: O valor do desconto é nulo ou inválido. Retornando o valor total.");
+            return contrato.getValorTotal();
+        }
+
+        // 2. Converte a porcentagem de desconto para um valor decimal
+        // Ex: 10% se torna 0.10
+        BigDecimal porcentagemDecimal = contrato.getDesconto().divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
+
+        // 3. Calcula o valor a ser descontado
+        BigDecimal valorDoDesconto = contrato.getValorTotal().multiply(porcentagemDecimal);
+
+        // 4. Subtrai o valor do desconto do valor total
+        BigDecimal valorFinal = contrato.getValorTotal().subtract(valorDoDesconto);
+
+        // Retorna o valor final, arredondado para duas casas decimais
+        return valorFinal.setScale(2, RoundingMode.HALF_UP);
     }
 
     private record EntitiesContext(Matricula matricula, Empresa empresa
