@@ -6,7 +6,9 @@ import com.escola.admin.model.entity.cliente.Contrato;
 import com.escola.admin.model.entity.cliente.StatusContaReceber;
 import com.escola.admin.model.entity.cliente.StatusContrato;
 import com.escola.admin.model.mapper.cliente.ContaReceberMapper;
+import com.escola.admin.model.mapper.cliente.ContratoMapper;
 import com.escola.admin.model.request.cliente.ContaReceberRequest;
+import com.escola.admin.model.response.cliente.ContaReceberPorMesDetalheResponse;
 import com.escola.admin.model.response.cliente.ContaReceberPorMesResumeResponse;
 import com.escola.admin.repository.cliente.ContaReceberRepository;
 import com.escola.admin.service.cliente.ContaReceberService;
@@ -17,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -26,10 +30,9 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -41,6 +44,7 @@ public class ContaReceberServiceImpl implements ContaReceberService {
     ContaReceberRepository repository;
     ContaReceberMapper mapper;
     ContratoService contratoService;
+    ContratoMapper contratoMapper;
 
     private static BigDecimal getValorASerPago(ContaReceber existingEntity) {
         BigDecimal fatorDesconto = existingEntity.getDesconto().divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
@@ -156,9 +160,11 @@ public class ContaReceberServiceImpl implements ContaReceberService {
                     final LocalDate inicioDoMes = dataRef.with(TemporalAdjusters.firstDayOfMonth());
                     final LocalDate fimDoMes = dataRef.with(TemporalAdjusters.lastDayOfMonth());
 
+                    List<StatusContrato> statusParaBuscar = Arrays.asList(StatusContrato.ATIVO, StatusContrato.CONCLUIDO);
+
                     // 2. Chama o repositório com as novas datas
                     List<ContaReceber> contas = repository
-                            .findByMesAndContratoStatus(inicioDoMes, fimDoMes, StatusContrato.ATIVO)
+                            .findByMesAndContratoStatus(inicioDoMes, fimDoMes, statusParaBuscar)
                             .orElse(Collections.emptyList());
 
                     // 2. Processa a lista de contas para calcular os valores de resumo.
@@ -183,6 +189,44 @@ public class ContaReceberServiceImpl implements ContaReceberService {
                 .doOnSuccess(resumo -> log.info("Resumo do mês de {} de {} gerado com sucesso.", dataRef.getMonth(), dataRef.getYear()))
                 .doOnError(e -> log.error("Falha ao gerar o resumo do mês: {}", e.getMessage(), e))                // 3. Operadores para mapeamento de erros (conforme sua necessidade)
                 .onErrorMap(e -> !(e instanceof BaseException), e -> new BaseException("Falha ao gerar o resumo do mês: %s".formatted(e.getMessage()), e));
+    }
+
+    @Override
+    public Optional<Page<ContaReceberPorMesDetalheResponse>> findByDataRef(LocalDate dataRef, Pageable pageable) {
+        Pageable effectivePageable = (pageable != null) ? pageable : Pageable.unpaged();
+        final LocalDate inicioDoMes = dataRef.with(TemporalAdjusters.firstDayOfMonth());
+        final LocalDate fimDoMes = dataRef.with(TemporalAdjusters.lastDayOfMonth());
+
+        List<StatusContrato> statusParaBuscar = Arrays.asList(StatusContrato.ATIVO, StatusContrato.CONCLUIDO);
+
+        // Supondo que o repositório retorne uma Page<ContaReceber>
+        Optional<Page<ContaReceber>> contasReceberPage = repository.findByDataRef(inicioDoMes, fimDoMes, statusParaBuscar, effectivePageable);
+        if (contasReceberPage.isEmpty()) {
+            return Optional.empty();
+        }
+
+        // Mapeia cada ContaReceber para o DTO
+        Page<ContaReceberPorMesDetalheResponse> dtoList = contasReceberPage.get().map(conta -> {
+            // Cálculo dos dias de atraso, se aplicável
+            Integer diasAtraso = 0;
+            if (conta.getDataPagamento() == null && conta.getDataVencimento().isBefore(LocalDate.now())) {
+                diasAtraso = (int) ChronoUnit.DAYS.between(conta.getDataVencimento(), LocalDate.now());
+            } else if (conta.getDataPagamento() != null && conta.getDataPagamento().isAfter(conta.getDataVencimento())) {
+                diasAtraso = (int) ChronoUnit.DAYS.between(conta.getDataVencimento(), conta.getDataPagamento());
+            }
+
+            return ContaReceberPorMesDetalheResponse.builder()
+                    .contrato(contratoMapper.toResponse(conta.getContrato()))
+                    .nome(conta.getContrato().getCliente().getNome())
+                    .valorTotal(conta.getValorTotal())
+                    .dataVencimento(conta.getDataVencimento())
+                    .valorPago(conta.getValorPago())
+                    .dataPagamento(conta.getDataPagamento())
+                    .diasAtraso(diasAtraso)
+                    .build();
+        });
+
+        return Optional.of(dtoList);
     }
 
     /**

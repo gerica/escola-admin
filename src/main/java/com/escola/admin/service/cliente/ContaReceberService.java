@@ -2,12 +2,15 @@ package com.escola.admin.service.cliente;
 
 import com.escola.admin.model.entity.cliente.ContaReceber;
 import com.escola.admin.model.request.cliente.ContaReceberRequest;
+import com.escola.admin.model.response.cliente.ContaReceberPorMesDetalheResponse;
 import com.escola.admin.model.response.cliente.ContaReceberPorMesResumeResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 public interface ContaReceberService {
 
@@ -27,4 +30,5 @@ public interface ContaReceberService {
 
     Mono<ContaReceberPorMesResumeResponse> fetchResumoByMes(LocalDate dataRef);
 
+    Optional<Page<ContaReceberPorMesDetalheResponse>> findByDataRef(LocalDate dataRef, Pageable pageable);
 }

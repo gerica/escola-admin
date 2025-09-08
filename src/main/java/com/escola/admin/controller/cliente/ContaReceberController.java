@@ -1,9 +1,11 @@
 package com.escola.admin.controller.cliente;
 
 import com.escola.admin.controller.help.PageableHelp;
+import com.escola.admin.controller.help.SortInput;
 import com.escola.admin.exception.BaseException;
 import com.escola.admin.model.mapper.cliente.ContaReceberMapper;
 import com.escola.admin.model.request.cliente.ContaReceberRequest;
+import com.escola.admin.model.response.cliente.ContaReceberPorMesDetalheResponse;
 import com.escola.admin.model.response.cliente.ContaReceberPorMesResumeResponse;
 import com.escola.admin.model.response.cliente.ContaReceberResponse;
 import com.escola.admin.service.cliente.ContaReceberService;
@@ -12,6 +14,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -20,7 +23,6 @@ import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.List;
 
 @Controller
@@ -31,7 +33,7 @@ public class ContaReceberController {
 
     public static final String SUCESSO = "Sucesso";
     ContaReceberMapper mapper;
-//    ContaReceberMapper mapper;
+    //    ContaReceberMapper mapper;
     ContaReceberService service;
     PageableHelp pageableHelp;
 
@@ -77,6 +79,17 @@ public class ContaReceberController {
     @PreAuthorize("hasAnyAuthority('FINANCEIRO', 'ADMIN_EMPRESA')")
     public Mono<ContaReceberPorMesResumeResponse> fetchResumoByMes(@Argument LocalDate dataRef) {
         return service.fetchResumoByMes(dataRef);
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAnyAuthority('FINANCEIRO', 'ADMIN_EMPRESA')")
+    public Page<ContaReceberPorMesDetalheResponse> fetchResumoByMesDetalhe(
+            @Argument LocalDate dataRef,
+            @Argument int page,
+            @Argument int size,
+            @Argument(name = "sort") List<SortInput> sort) {
+        return service.findByDataRef(dataRef, pageableHelp.getPageable(page, size, sort))
+                .orElse(Page.empty());
     }
 
 }

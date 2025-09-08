@@ -31,6 +31,27 @@ type ContaReceberPorMesResumeResponse{
     totalEmAberto: BigDecimal
 }
 
+type ContaReceberPorMesResumeDetalheResponse{
+    contrato: ContratoResponse!,
+    nome: String!
+    valorTotal: BigDecimal
+    dataVencimento: Date
+    valorPago: BigDecimal
+    dataPagamento: Date
+    diasAtraso: Int
+}
+
+type ContaReceberPorMesResumeDetalheResponsePage {
+    content: [ContaReceberPorMesResumeDetalheResponse]
+    totalPages: Int
+    totalElements: Long
+    number: Int
+    size: Int
+    first: Boolean!
+    last: Boolean!
+    empty: Boolean!
+}
+
 # Define a estrutura de uma página de Anexos
 type ContaReceberResponsePage {
     content: [ContaReceberResponse!]!
@@ -47,6 +68,12 @@ extend type Query {
     fetchAllContasReceber(idContrato: ID!): [ContaReceberResponse]!
     fetchByIdContaReceber(id: ID): ContaReceberResponse!
     fetchResumoByMes(dataRef: Date!): ContaReceberPorMesResumeResponse!
+    fetchResumoByMesDetalhe(
+        dataRef: Date!
+        page: Int = 0 # Default to page 0
+        size: Int = 10 # Default to size 10
+        sort: [SortRequest]
+    ): ContaReceberPorMesResumeDetalheResponsePage!
 }
 
 extend type Mutation {
