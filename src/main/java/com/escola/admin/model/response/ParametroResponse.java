@@ -14,6 +14,5 @@ public class ParametroResponse {
 
     private Integer id;
     private String chave;
-    private String codigoMunicipio;
-    private String modeloContrato;
+    private String valor;
 }

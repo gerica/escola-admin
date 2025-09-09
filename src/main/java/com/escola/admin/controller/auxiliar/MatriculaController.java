@@ -7,6 +7,7 @@ import com.escola.admin.model.entity.Usuario;
 import com.escola.admin.model.mapper.auxiliar.MatriculaMapper;
 import com.escola.admin.model.request.auxiliar.MatriculaRequest;
 import com.escola.admin.model.response.auxiliar.MatriculaResponse;
+import com.escola.admin.model.response.auxiliar.TurmaResponse;
 import com.escola.admin.service.auxiliar.MatriculaService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -103,6 +104,13 @@ public class MatriculaController {
     public Mono<String> deleteMatriculaById(@Argument Long id) {
         return matriculaService.deleteById(id)
                 .then(Mono.just("Operação realizada com sucesso."))
+                .onErrorResume(BaseException.class, Mono::error);
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    public Mono<MatriculaResponse> fetchByCodigo(@Argument String codigo) {
+        return matriculaService.findByCodigo(codigo).map(matriculaMapper::toResponse)
                 .onErrorResume(BaseException.class, Mono::error);
     }
 }

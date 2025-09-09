@@ -45,6 +45,7 @@ extend type Query {
         size: Int! = 10 # Valor padrão para o tamanho da página
         sort: [SortRequest] # Lista de critérios de ordenação
     ): MatriculaResponsePage!
+    fetchByCodigo(codigo: String!): MatriculaResponse
 }
 
 extend type Mutation {

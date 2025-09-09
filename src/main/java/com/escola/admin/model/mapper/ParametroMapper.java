@@ -14,16 +14,9 @@ import org.mapstruct.ReportingPolicy;
 )
 public interface ParametroMapper {
 
-    /**
-     * Mapeia a entidade Parametro para o DTO ParametroResponse.
-     *
-     * @param parametro A entidade vinda do banco de dados.
-     * @return O DTO de resposta "achatado".
-     */
     @Mapping(source = "id", target = "id")
     @Mapping(source = "chave", target = "chave")
-    @Mapping(source = "jsonData.codigoMunicipio", target = "codigoMunicipio")
-    @Mapping(source = "jsonData.modeloContrato", target = "modeloContrato")
+    @Mapping(source = "jsonData.valor", target = "valor")
     ParametroResponse toResponse(Parametro parametro);
 
     /**

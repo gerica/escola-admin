@@ -24,4 +24,6 @@ public interface MatriculaService {
     Mono<Void> delete(Matricula entity);
 
     Mono<Void> alterarStatus(Matricula matricula, StatusMatricula statusMatricula);
+
+    Mono<Matricula> findByCodigo(String codigo);
 }

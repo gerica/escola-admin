@@ -356,6 +356,23 @@ public class MatriculaServiceImpl implements MatriculaService {
                 .then();
     }
 
+    @Override
+    public Mono<Matricula> findByCodigo(String codigo) {
+        log.info("Buscando matricula pelo código: {}", codigo);
+        return Mono.fromCallable(() -> repository.findByCodigo(codigo))
+                .flatMap(optionalTurma -> {
+                    if (optionalTurma.isPresent()) {
+                        log.info("Matricula encontrado com sucesso para o código: {}", codigo);
+                        return Mono.just(optionalTurma.get());
+                    } else {
+                        log.warn("Nenhum matricula encontrado para o código: {}", codigo);
+                        return Mono.empty();
+                    }
+                })
+                .doOnError(e -> log.error("Erro ao buscar matrícula para o código {}: {}", codigo, e.getMessage(), e));
+
+    }
+
     // 2. Data structure to hold the fetched entities
     private record EntitiesContext(Turma turma, Cliente cliente, ClienteDependente dependente) {
     }

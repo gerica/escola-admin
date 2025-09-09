@@ -39,6 +39,7 @@ public class ParametroController {
 
         var optParametro = service.findByChave(chave, usuarioAutenticado.getEmpresaIdFromToken());
         log.info("Admin-service retornando para chave {}: {}", chave, optParametro); // <-- Adicione este log
+
         return optParametro.map(mapper::toResponse);
 
     }

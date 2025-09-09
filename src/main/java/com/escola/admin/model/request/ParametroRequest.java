@@ -12,6 +12,5 @@ import lombok.experimental.FieldDefaults;
 @Builder
 public class ParametroRequest {
     String chave;
-    String codigoMunicipio;
-    String modeloContrato;
+    String valor;
 }

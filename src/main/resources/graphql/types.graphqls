@@ -8,8 +8,7 @@ type AppConfigResponse{
 type ParametroResponse{
     id: ID
     chave: String
-    codigoMunicipio: String
-    modeloContrato: String
+    valor: String
 }
 
 type AuthenticationResponse{

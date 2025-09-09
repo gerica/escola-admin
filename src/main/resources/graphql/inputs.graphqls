@@ -1,7 +1,6 @@
 input ParametroRequest{
      chave:String
-     codigoMunicipio:String
-     modeloContrato:String
+     valor:String
 }
 
 input AuthenticationRequest {
